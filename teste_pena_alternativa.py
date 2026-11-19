@@ -33,4 +33,9 @@ assert b["titulo"] == "PSC: faltam 104 h · 14 h em atraso" and any("1 mês venc
 # antes do 1º vencimento: em dia (o status "verificar" do SEEU continua sendo ponto a conferir)
 a0, b0 = ra.avaliar(rel, date(2025, 11, 1))
 assert b0["em_dia"] and b0["valor"] == "faltam 104 h · em dia" and not a0["em_dia"] and a0["pendencias"] == ["status no SEEU: verificar"], (a0, b0)
+# comparecimento (sem valor): só os vencidos até hoje contam - nada de "x de y" com as datas até o fim da pena
+rel_c = ra.ler(["CONDIÇÕES DE CUMPRIMENTO DO REGIME ABERTO\nData de Início: 01/01/2026\nStatus: ATIVA\nCONDIÇÕES\nComparecimento em juízo\nStatus: ATIVA\n"
+                "Cumprimentos:\nData Prevista de Cumprimento Data de Cumprimento Efetivo\n30/01/2026 20/01/2026\n28/02/2026\n30/03/2026\n30/04/2027\n30/05/2027"])
+cc = ra.avaliar(rel_c, date(2026, 4, 15))[0]
+assert cc["valor"] == "2 vencidos sem registro" and not cc["em_dia"], cc
 print("ok: pena alternativa (leitura do relatório do SEEU; parcelas vencidas e pagas a menor; horas de PSC devidas x cumpridas)")

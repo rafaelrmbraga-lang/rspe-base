@@ -114,6 +114,29 @@ def _quando(d_txt, hoje):
     return "faltam " + _extenso(n)
 
 
+RE_HIPOTESE = re.compile(r"^(✔|✓|\?)\s*(Inciso\s+[IVXL]+[^:]{0,20}):\s*(.*)$")
+
+
+def _hipotese_provavel(conta):
+    """A hipótese de indulto/comutação mais provável, das linhas da conta ("✔ Inciso I: ...", "? Inciso XII: ..."): a primeira
+    atendida; sem ela, a primeira a verificar que não depende de dado fora do RSPE; sem ela, a primeira a verificar. "" se não há."""
+    hs = []
+    for ln in conta or []:
+        mm = RE_HIPOTESE.match(ln.strip())
+        if mm:
+            hs.append((mm.group(1) != "?", "depende de dado que o rspe não traz" not in mm.group(3).lower(), mm.group(2), mm.group(3)))
+    if not hs:
+        return ""
+    ok, _, nome, desc = sorted(hs, key=lambda h: (not h[0], not h[1]))[0]
+    curto = re.split(r"\s+-\s+|\.\s", desc, maxsplit=1)[0].strip().rstrip(".")
+    curto = re.sub(r"\s*\((cumprido|tem|falta)\b.*$", "", curto).strip()   # quanto já cumpriu fica na conta
+    if len(curto) > 90:
+        curto = curto[:88].rsplit(" ", 1)[0] + "…"
+    while curto.count("(") > curto.count(")"):                         # nada de parêntese aberto pela metade
+        curto = curto[:curto.rfind("(")].rstrip(" ,;")
+    return "%s (%s)%s" % (nome[0].lower() + nome[1:], curto, "" if ok else ", a verificar")
+
+
 def montar(r, m, hoje, faltou=None, fichas_n=0):
     """Painel a partir do registro (r) e do modelo do APTO (m, já em json_seguro). faltou: o que a leitura das abas não achou."""
     sem_ficha = _sem_ficha(m)
@@ -181,23 +204,38 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
                                     ("próximo marco " + m["presc_prox"]) if certo and m.get("presc_prox") else "",
                                     "" if certo else (m.get("presc_ppe_full") or pp) + ": conferir os marcos interruptivos e as datas na ação penal",
                                     _linhas(m.get("presc_obs"), 4), "CP, arts. 110, 112, 113, 116 e 117"))
+    # comutação já concedida no RSPE: a pena desse decreto já foi comutada - o indulto do mesmo decreto não fica como pendência
+    comutada = {}
+    for k, _, _, dec in DECRETOS:
+        if k.startswith("c") and (DECIDIDO.match(m.get(k) or "") or DECIDIDO.match(m.get(k + "_txt") or "")) and \
+                re.match(r"concedid", (m.get(k) or "") + (m.get(k + "_txt") or ""), re.I):
+            dt = re.search(r"\d{2}/\d{2}/\d{4}", m.get(k + "_txt") or "")
+            comutada[dec] = dt.group(0) if dt else ""
     for k, kexp, rot, dec in DECRETOS:
         v = (m.get(k) or "").strip()
         if not v:
             continue
         txt = m.get(k + "_txt") or v
+        if k.startswith("i") and dec in comutada and not DECIDIDO.match(v):
+            nao_cabe.append({"titulo": "%s · %s" % (rot, dec),
+                             "motivo": "a comutação do mesmo decreto já foi concedida" + (" em " + comutada[dec] if comutada[dec] else "") + ": pena comutada"})
+            continue
         if NAO_CABE.match(v):
             nao_cabe.append({"titulo": "%s · %s" % (rot, dec), "motivo": txt})
             continue
         if DECIDIDO.match(v) or DECIDIDO.match(txt):
             continue  # já decidido pelo juízo: não é ponto a conferir
-        conta = _linhas(m.get(kexp) or m.get("det" + k[1:]), 8)
+        conta = _linhas(m.get(kexp) or m.get("det" + k[1:]), 12)
+        # só a hipótese mais provável no cartão (a lista inteira fica na conta): fácil de ler para quem analisa
+        prov = _hipotese_provavel(conta)
+        resumo = "%s · %s" % (dec, ("mais provável: " + prov) if prov else re.split(r";|\s·\sart\.", txt, maxsplit=1)[0].strip())
         if re.match(r"sim|poss", v, re.I):
-            beneficios.append(_item(k, not sem_ficha, rot, "tempo atendido", "%s · %s" % (dec, txt),
+            beneficios.append(_item(k, not sem_ficha, rot, "tempo atendido", resumo,
                                     "falta grave no período do decreto (ficha disciplinar)" if sem_ficha else "", conta, dec))
         else:
-            beneficios.append(_item(k, False, rot, "a verificar", "%s · %s" % (dec, txt),
-                                    "o requisito indicado" + (" e a falta grave (ficha disciplinar)" if sem_ficha else ""), conta, dec))
+            beneficios.append(_item(k, False, rot, "a verificar", resumo,
+                                    ("o requisito da hipótese" if prov else "o requisito indicado") +
+                                    (" e a falta grave (ficha disciplinar)" if sem_ficha else ""), conta, dec))
     if m.get("st_ok") or m.get("st_quase"):
         pend = [x.get("txt") for x in m.get("st_itens") or [] if x.get("ok") is None]
         beneficios.append(_item("st", bool(m.get("st_ok")) and not pend, "Saída temporária",
@@ -412,6 +450,21 @@ def analisar_rspe(txt):
     return json.dumps(p, ensure_ascii=False)
 
 
+def _medida_vigente(med, regime):
+    """A medida vale hoje? Encerrada (finalizada, cumprida) não; condições de cumprimento de um regime só se é o regime atual do RSPE;
+    condições do livramento só em livramento."""
+    st = rs._sem_acento((med.get("status") or "").upper())
+    if st and st not in ("ATIVA", "VERIFICAR", "NAO CUMPRIDA"):
+        return False
+    t = rs._sem_acento(med.get("titulo") or "").lower()
+    m_ = re.search(r"condicoes de cumprimento do regime (semiaberto|aberto|fechado)", t)
+    if m_:
+        return bool(regime) and regime.split()[0].startswith(m_.group(1)) if regime else False
+    if "livramento" in t:
+        return "livramento" in regime
+    return True
+
+
 FUND_ALTERNATIVA = "CP, arts. 43 a 46 (conversão: art. 44, § 4º); LEP, arts. 147 a 155"
 
 
@@ -421,10 +474,14 @@ def _com_alternativas(p, rels, hoje):
     medida ativa, sem o aviso de "não iniciou o cumprimento" (a pena está sendo cumprida pela restritiva)."""
     q = {k: v for k, v in p.items() if k not in ("assinatura", "chave", "motor", "painel", "base_juridica", "base_digital")}
     itens, ativa = [], None
+    regime = rs._sem_acento(str(q.get("regime") or "")).lower()
     for rel in rels:
         if rel.get("processo") and re.sub(r"\D", "", rel["processo"]) != re.sub(r"\D", "", q.get("processo") or ""):
             continue   # relatório de outro processo: fora
-        for med in rel.get("medidas") or []:
+        # só as medidas que valem hoje: as encerradas ficam fora, e as condições de um regime só contam se ele é o regime atual do
+        # RSPE (condições do semiaberto de quem já está no aberto são de uma fase anterior da execução)
+        rel = dict(rel, medidas=[m_ for m_ in rel.get("medidas") or [] if _medida_vigente(m_, regime)])
+        for med in rel["medidas"]:
             if (med.get("status") or "").upper() == "ATIVA" and not ativa:
                 ativa = med
         for a in ralt.avaliar(rel, hoje):
@@ -434,14 +491,17 @@ def _com_alternativas(p, rels, hoje):
                                a["conta"], FUND_ALTERNATIVA))
     if not itens:
         return p
-    q["alertas"] = [a for a in q.get("alertas") or [] if not (ativa and re.search(r"n[aã]o inici", a.get("titulo") or "", re.I))] + \
+    q["alertas"] = [a for a in q.get("alertas") or [] if not (prd and re.search(r"n[aã]o inici", a.get("titulo") or "", re.I))] + \
         [x for x in itens if x["status"] != "verde"]
     q["confere"] = list(q.get("confere") or []) + [x for x in itens if x["status"] == "verde"]
-    if ativa:
-        q["regime"] = "Restritiva de direitos" if re.search(r"restritiva", ativa.get("titulo") or "", re.I) else ativa.get("titulo") or q.get("regime")
+    prd = ativa if ativa and re.search(r"restritiva", ativa.get("titulo") or "", re.I) else None
+    if prd and (not regime or "nao inici" in regime):
+        # a pena é cumprida pela restritiva: o regime "aberto (não iniciado)" do RSPE dá lugar à medida; nos demais casos, o regime
+        # é sempre o do RSPE
+        q["regime"] = "Restritiva de direitos"
         q["pena"] = dict(q.get("pena") or {}, aviso="")
-    q["icones"] = list(q.get("icones") or []) + [{"tipo": "prd", "rotulo": "Restritiva de direitos" if ativa and "estritiva" in (ativa.get("titulo") or "")
-                                                  else "Medida alternativa",
+    q["icones"] = list(q.get("icones") or []) + [{"tipo": "prd", "rotulo": "Restritiva de direitos" if prd else "Condições do regime"
+                                                  if ativa and re.search(r"regime", ativa.get("titulo") or "", re.I) else "Medida alternativa",
                                                   "estado": "ok" if all(x["status"] == "verde" for x in itens) else "conferir",
                                                   "alvo": next((x["id"] for x in itens if x["status"] != "verde"), itens[0]["id"])}]
     q["alternativas"] = [{"medida": m.get("titulo"), "status": m.get("status"), "inicio": m.get("inicio"), "pena": m.get("pena")}

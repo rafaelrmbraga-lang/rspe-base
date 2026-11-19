@@ -217,7 +217,9 @@ def avaliar(rel, hoje):
                 if sem:
                     pend.append("%d %s vencido%s sem registro (%s)" % (len(sem), "cumprimento" if len(sem) == 1 else "cumprimentos", "" if len(sem) == 1 else "s",
                                                                        ", ".join(x["prevista"] for x in sem[:6]) + ("…" if len(sem) > 6 else "")))
-                valor = "%d de %d registrados" % (len(cs) - len([x for x in cs if not x["efetiva"]]), len(cs)) if cs else ""
+                feitos = len([x for x in venc if x["efetiva"]])
+                valor = ("%d %s sem registro" % (len(sem), "vencido" if len(sem) == 1 else "vencidos")) if sem else \
+                    ("em dia (%d de %d até hoje)" % (feitos, len(venc)) if venc else "em dia")
             if c.get("termino_previsto"):
                 conta.append("Término previsto: %s%s" % (c["termino_previsto"], (" (efetivo: %s)" % c["termino_efetivo"]) if c.get("termino_efetivo") else ""))
             if st in ("VERIFICAR", "NÃO CUMPRIDA", "NAO CUMPRIDA"):

@@ -58,6 +58,20 @@ anpp = json.loads(rp.analisar_rspe(json.dumps({"textos": [t0], "hoje": "12/10/20
 assert anpp["especial"]["tipo"] == "anpp" and anpp["regime"] == "ANPP" and not anpp["alertas"] and not anpp["marcos"] and not anpp["nao_cabe"], anpp
 assert anpp["assinatura"] != sem["assinatura"] and anpp["chave"] == sem["chave"]
 assert rp.medida_alternativa({"assunto": "Transação Penal"})["tipo"] == "transacao" and rp.medida_alternativa({"assunto": "7791 - Pena Privativa de Liberdade"}) is None
+# indulto do decreto cuja comutação já foi concedida: pena comutada - fora das pendências, em "não cabe"
+m2 = dict(m, i25="Verificar", i25_txt="A verificar · art. 9º, XII, XIII", c25="Concedido", c25_txt="Concedido · 23/09/2026")
+o2 = rp.montar(r, m2, h)
+assert not any(a["id"] == "i25" for a in o2["alertas"]) and any("comutação do mesmo decreto já foi concedida em 23/09/2026" in x["motivo"] for x in o2["nao_cabe"]), o2["nao_cabe"]
+# a hipótese mais provável (e só ela) no cartão do indulto; a lista inteira fica na conta
+assert rp._hipotese_provavel(["✔ Inciso I: pena ≤ 8 anos sem VGA, exige 1/5 (cumprido 1a de 6a).", "? Inciso XII: estudo. Depende de dado que o RSPE não traz."]) \
+    == "inciso I (pena ≤ 8 anos sem VGA, exige 1/5)"
+assert rp._hipotese_provavel(["? Inciso XII: pena ≤ 12 anos - estudo. Depende de dado que o RSPE não traz.", "? Inciso VII: regime aberto, cumprido 1/5"]) \
+    == "inciso VII (regime aberto, cumprido 1/5), a verificar"
+assert rp._hipotese_provavel(["Decreto 12.790/2025 · data de referência 25/12/2025."]) == ""
+# medidas que valem hoje: condições do regime atual (o do RSPE), nada de encerrada
+assert not rp._medida_vigente({"titulo": "Condições De Cumprimento Do Regime Semiaberto", "status": "ATIVA"}, "aberto")
+assert rp._medida_vigente({"titulo": "Condições De Cumprimento Do Regime Aberto", "status": "ATIVA"}, "aberto")
+assert not rp._medida_vigente({"titulo": "Substituição De Pena Privativa Por Restritiva De Direito", "status": "FINALIZADA"}, "aberto (nao iniciado)")
 if len(sys.argv) > 1:
     json.dump(out, open(sys.argv[1], 'w'), ensure_ascii=False)
-print('ok: painel - decidido no SEEU não alerta, não alcançado afastado, aviso de cadastro recolhido, recálculo da progressão num cartão só, ANPP sem alerta de condenação')
+print('ok: painel - decidido no SEEU não alerta, não alcançado afastado, aviso de cadastro recolhido, recálculo da progressão num cartão só, ANPP sem alerta de condenação, indulto de decreto já comutado, hipótese mais provável, medidas vigentes')
