@@ -10,14 +10,17 @@ A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI s
 lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
 SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
 
-PAINEL DO APTO NA PÁGINA DO PROCESSO (1.15) - NÃO PRECISA DO APTO
+PAINEL DO APTO NA PÁGINA DO PROCESSO (1.16) - NÃO PRECISA DO APTO
  - Ao abrir um processo no SEEU, a análise aparece à direita, na ordem da ficha
    do assistido: pena, marcos, benefícios e demais pontos. Verde "Confere" =
    há certeza; amarelo "Conferir" = conferir (sem "agir já"). Cada item abre a
    conta e o fundamento.
- - Leitura: as abas do processo são buscadas em segundo plano, nesta mesma aba
-   e com a sua sessão (só leitura: Informações Gerais e Adicionais, Partes,
-   Processos Criminais, Eventos e Incidentes). Nada é clicado nem enviado.
+ - Leitura: o relatório da situação processual executória (RSPE) que o
+   próprio SEEU gera para o processo é buscado em segundo plano, nesta mesma
+   aba e com a sua sessão (um único pedido, o mesmo do botão do relatório; com
+   o RSPE automático ligado, o mesmo pedido serve aos dois). O PDF é lido no
+   navegador pelo leitor do APTO: o resultado é o mesmo do APTO. Nada é
+   clicado nem enviado. Sem o relatório lido, o painel não conclui nada.
  - O cálculo é o do APTO (os mesmos arquivos, rodando dentro da extensão).
  - O SEEU continua igual: o painel só reserva a sua largura, não abre aba nem
    janela. "›" (ou Esc) recolhe numa lingueta na borda, com a contagem do que
@@ -25,8 +28,8 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.15) - NÃO PRECISA DO APTO
  - O resultado fica guardado por 10 minutos (só na sessão do navegador):
    trocar de aba no SEEU não refaz a leitura. "Ler de novo" (↻) refaz.
  - A primeira análise depois de abrir o navegador leva alguns segundos (o
-   motor é carregado uma vez); as seguintes, cerca de 1 segundo mais a
-   leitura das abas.
+   motor é carregado uma vez); as seguintes, cerca de 1 segundo mais o
+   tempo do SEEU gerar o relatório.
  - Ficha disciplinar: "Carregar a ficha (PDF)" no painel, ou arraste o PDF
    para ele; a ficha que você abrir no SIAPEN (com a ficha automática ligada)
    também vale. Só é lida neste computador e só fica na sessão do navegador

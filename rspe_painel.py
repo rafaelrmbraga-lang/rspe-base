@@ -225,7 +225,7 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
         demais.append(_item("ficha_outra", False, "Ficha disciplinar não usada", "", "a ficha carregada não confere com este assistido "
                             "(nome, mãe, CPF ou data de nascimento)", "carregar a ficha deste assistido", [], ""))
     for f in faltou or []:
-        demais.append(_item("faltou", False, "Não lido nas abas do SEEU", "", f, "conferir no SEEU: sem esse dado, o que depende dele fica a verificar"))
+        demais.append(_item("faltou", False, "Leitura incompleta", "", f, "conferir no SEEU: sem esse dado, o que depende dele fica a verificar"))
 
     crimes = [{"texto": "%s (%s)" % (x.get("nome_crime") or "Crime", x.get("dispositivo") or ""), "pena": x.get("pena") or "",
                "proc": x.get("proc") or "", "hediondo": x.get("hediondo_txt") or ""}
@@ -308,6 +308,30 @@ def analisar_abas(txt):
     if faltou:
         p["diag"] = ra.diagnostico(e.get("abas"))  # fora da assinatura: só para ajustar a leitura
     return json.dumps(p, ensure_ascii=False)
+
+
+def analisar_rspe(txt):
+    """Painel a partir do RSPE (Relatório da Situação Processual Executória) que o próprio SEEU gera para o processo aberto,
+    lido no navegador: {"paginas": [caracteres do pdf.js] | "textos": [texto de cada página], "hash", "hoje", "fichas"} em texto
+    JSON -> painel em texto JSON. É o MESMO caminho do APTO ao importar o RSPE: o texto de cada página como o pdfplumber o dá
+    (rspe_pdf_paginas emula o extract_text) -> rspe_scraper.extrair_paginas -> o motor. O que o leitor não conseguiu ler
+    ("_leitura_parcial") entra como ponto a conferir. Documento que não é o RSPE: {"erro": "nao_rspe", "motivo"}."""
+    import rspe_pdf_paginas as pp
+    e = json.loads(txt)
+    hoje = rs.to_date(e.get("hoje") or "") or date.today()
+    textos = e.get("textos")
+    if textos is None:
+        textos = [pg.extract_text() or "" for pg in pp.paginas(e.get("paginas") or [])]
+    try:
+        r = rs.extrair_paginas([str(t) for t in textos], "RSPE.pdf")
+    except ValueError as x:
+        return json.dumps({"erro": "nao_rspe", "motivo": str(x)}, ensure_ascii=False)
+    if not r.get("processo_execucao"):
+        return json.dumps({"erro": "nao_rspe", "motivo": "o relatório veio sem o número do processo"}, ensure_ascii=False)
+    if e.get("hash"):
+        r["_hash"] = str(e["hash"])
+    fichas = [f for f in e.get("fichas") or [] if isinstance(f, dict)]
+    return json.dumps(analisar(r, contexto_fichas(fichas), hoje, list(r.get("_leitura_parcial") or []), len(fichas)), ensure_ascii=False)
 
 
 def ler_ficha(txt):

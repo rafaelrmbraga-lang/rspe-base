@@ -69,11 +69,12 @@
     if (!pre || !pre.ok) return pre || { ok: false, motivo: "extensão indisponível" };
     let resp;
     try {
-      resp = await fetch(url, { credentials: "include", cache: "no-store" });
+      // o RSPE desta página: o mesmo pedido que o painel do processo usa (um só ao SEEU); o do lote é de outro processo
+      resp = !lote && url === rspeDaPagina() ? await A.buscarRspe(url, !!forcar) : await fetch(url, { credentials: "include", cache: "no-store" });
     } catch (e) {
       return chrome.runtime.sendMessage({ tipo: "falha", processo, motivo: "o SEEU não respondeu (" + (e && e.message || e) + ")" });
     }
-    const bytes = new Uint8Array(await resp.arrayBuffer());
+    const bytes = resp.bytes || new Uint8Array(await resp.arrayBuffer());
     if (!resp.ok || !A.ehPdf(bytes)) {
       const motivo = !resp.ok ? "o SEEU respondeu com erro " + resp.status : "o SEEU não devolveu um PDF (sessão expirada?)";
       return chrome.runtime.sendMessage({ tipo: "falha", processo, motivo });

@@ -31,32 +31,39 @@ sys.path.insert(0, "/motor")
 import rspe_motor, rspe_painel
 rspe_motor.VERSAO = ${JSON.stringify(info.versao)}`);
       const rp = py.globals.get("rspe_painel");
-      return { py, info, analisar: rp.analisar_abas, lerFicha: rp.ler_ficha, carga: Math.round(performance.now() - t0) };
+      return { py, info, analisar: rp.analisar_rspe, lerFicha: rp.ler_ficha, carga: Math.round(performance.now() - t0) };
     })().catch((e) => { pronto = null; throw e; });
   }
   return pronto;
 }
 
-// {"abas": {nome: HTML}, "hoje": "dd/mm/aaaa"} em texto -> painel calculado aqui (texto JSON)
-export async function analisar(texto) {
-  const m = await carregar();
-  const t = performance.now();
-  const painel = m.analisar(String(texto));
-  return { ok: true, painel, info: { versao: m.info.versao, base_juridica: m.info.base_juridica, pyodide: m.info.pyodide }, carga: m.carga,
-    ms: Math.round(performance.now() - t) };
-}
-
-// ficha disciplinar do SIAPEN (PDF): os caracteres pelo pdf.js (posição e fonte, como o pdfplumber) e o MESMO leitor do APTO
+// caracteres de um PDF pelo pdf.js (posição e fonte, como o pdfplumber do APTO)
 let pdfjs = null;
-export async function lerFicha(bytes, arquivo) {
-  const m = await carregar();
+async function caracteresDoPdf(bytes) {
   if (!pdfjs) {
     pdfjs = await import(url("pdfjs/pdf.min.mjs"));
     pdfjs.GlobalWorkerOptions.workerSrc = url("pdfjs/pdf.worker.min.mjs");
   }
   const { caracteres } = await import(url("painel/pdf_chars.mjs"));
+  return caracteres(pdfjs, bytes);
+}
+
+// RSPE (PDF gerado pelo SEEU) + {"hoje", "fichas", "hash"} -> painel calculado aqui (texto JSON), pelo mesmo leitor do APTO
+export async function analisarRspe(bytes, extra) {
+  const m = await carregar();
+  const t = performance.now();
   let paginas;
-  try { paginas = await caracteres(pdfjs, bytes); } catch (e) { return { ok: false, erro: "o PDF não abriu (" + String((e && e.message) || e) + ")" }; }
+  try { paginas = await caracteresDoPdf(bytes); } catch (e) { return { ok: false, erro: "o PDF do relatório não abriu (" + String((e && e.message) || e) + ")" }; }
+  const painel = m.analisar(JSON.stringify(Object.assign({}, extra || {}, { paginas })));
+  return { ok: true, painel, info: { versao: m.info.versao, base_juridica: m.info.base_juridica, pyodide: m.info.pyodide }, carga: m.carga,
+    ms: Math.round(performance.now() - t) };
+}
+
+// ficha disciplinar do SIAPEN (PDF): os caracteres pelo pdf.js e o MESMO leitor do APTO
+export async function lerFicha(bytes, arquivo) {
+  const m = await carregar();
+  let paginas;
+  try { paginas = await caracteresDoPdf(bytes); } catch (e) { return { ok: false, erro: "o PDF não abriu (" + String((e && e.message) || e) + ")" }; }
   const r = JSON.parse(m.lerFicha(JSON.stringify({ paginas, arquivo: arquivo || "ficha.pdf" })));
   return r.erro ? { ok: false, erro: r.erro } : { ok: true, ficha: r.ficha, resumo: r.resumo };
 }

@@ -1,7 +1,7 @@
 // Painel no SEEU, de ponta a ponta e SEM o APTO: Chromium com a extensão carregada e as páginas do SEEU fictício (no visual
 // das capturas oficiais) servidas por rota do Playwright - nada vai ao SEEU real. Confere: o painel aparece na própria aba
-// (nenhuma aba nova), a extensão lê as abas em segundo plano só com GET de endereços de leitura, chega ao MESMO resultado que
-// o Python do APTO (assinatura), a página reserva a largura do painel, recolher/abrir pela lingueta e o estado é lembrado;
+// (nenhuma aba nova), a extensão busca em segundo plano só o RSPE do processo (um GET, pelo link da página), lê o PDF no
+// navegador e chega ao MESMO resultado que o Python do APTO lendo o mesmo PDF (assinatura), a página reserva a largura do painel, recolher/abrir pela lingueta e o estado é lembrado;
 // trocar de aba no SEEU não refaz a leitura (resultado guardado na sessão).
 // Uso: python paginas_painel.py S035,S141,S006 paginas.json && node teste_painel_e2e.js paginas.json [saida_dir]
 const { chromium } = require("playwright");
@@ -31,6 +31,10 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     const dig = u.searchParams.get("numeroUnico");
     if (dig) atual = Object.values(DADOS).find((c) => c.processo.replace(/\D/g, "") === dig) || null;
     if (!atual) return rota.fulfill({ status: 404, body: "" });
+    if (/processoExecucaoPenal\.do$/.test(u.pathname)) {
+      return u.pathname + u.search === atual.url_rspe
+        ? rota.fulfill({ contentType: "application/pdf", body: fs.readFileSync(atual.rspe_pdf) }) : rota.fulfill({ status: 404, body: "" });
+    }
     const chave = dig ? "/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabInformacoesAdicionais" : u.pathname + u.search;
     const html = atual.paginas[chave];
     return html ? rota.fulfill({ contentType: "text/html; charset=utf-8", body: html }) : rota.fulfill({ status: 404, body: "" });
@@ -51,14 +55,14 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     await f.waitForSelector(".pena, .aviso", { timeout: 90000 });
     const leg = (await f.textContent(".leg")).replace(/\s+/g, " ").trim();
     const meus = pedidos.slice(antes);
-    console.log(id, "·", leg, "·", meus.length - 1, "pedidos de leitura ·", Date.now() - t0, "ms");
+    console.log(id, "·", leg, "·", meus.length - 1, "pedido de leitura ·", Date.now() - t0, "ms");
     ok(leg.includes(c.esperado.contagem.verde + " confere") && leg.includes(c.esperado.contagem.amarelo + " conferir"),
       id + ": contagem diferente do Python do APTO (" + leg + " x " + JSON.stringify(c.esperado.contagem) + ")");
     const assin = await sw.evaluate(async (dig) => { const g = await chrome.storage.session.get("painel:" + dig); return g["painel:" + dig] && g["painel:" + dig].resultado.painel.assinatura; }, c.processo.replace(/\D/g, ""));
     ok(assin === c.esperado.assinatura, id + ": assinatura da extensão diferente da do Python do APTO");
     ok(meus.every((p) => p.metodo === "GET"), id + ": só GET ao SEEU");
     ok(meus.every((p) => !/preAnalise|leitura|dispensar|assinar|juntar|salvar|excluir|alterar/i.test(p.url)), id + ": só endereços de leitura");
-    ok(meus.some((p) => /processoCriminal\.do/.test(p.url)), id + ": leu as páginas dos processos criminais");
+    ok(meus.length === 2 && meus[1].url === c.url_rspe, id + ": um único pedido além da página: o RSPE pelo link da página (" + meus.map((p) => p.url.slice(0, 60)).join(" | ") + ")");
     ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "392px", id + ": a página reserva a largura do painel");
     await pg.screenshot({ path: path.join(SAIDA, `painel_${id}.png`) });
     // trocar de aba no SEEU (a página recarrega): o painel volta pelo resultado guardado, sem ler as abas de novo
@@ -66,7 +70,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabEventos");
     const f2 = await moldura();
     await f2.waitForSelector(".pena", { timeout: 30000 });
-    ok(pedidos.length - n0 === 1, id + ": trocar de aba não deve refazer a leitura (" + (pedidos.length - n0 - 1) + " pedidos a mais)");
+    ok(pedidos.length - n0 === 1, id + ": trocar de aba não deve refazer a leitura (" + pedidos.slice(n0 + 1).map((p) => p.url.slice(0, 90)).join(" | ") + ")");
   }
   // ficha disciplinar: carregar o PDF pelo botão do painel (a ficha é lida no navegador: pdf.js + o leitor do APTO)
   {

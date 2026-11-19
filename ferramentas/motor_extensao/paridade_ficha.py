@@ -1,7 +1,7 @@
 """Paridade da leitura da FICHA DISCIPLINAR no navegador com a do APTO: fichas do SIAPEN fictícias em PDF (uma página, várias
 páginas, sem histórico, com o histórico antigo oculto em 10 pt e o rodapé em 7 pt) são lidas (1) pelo APTO, com o pdfplumber
 (rspe_ficha.extrair) e (2) como na extensão: caracteres pelo pdf.js (node) -> rspe_pdf_paginas -> o mesmo leitor
-(rspe_ficha.extrair_paginas_pdf). A ficha tem de sair IDÊNTICA. Uso: python ferramentas/motor_extensao/paridade_ficha.py"""
+(rspe_ficha.extrair_paginas_pdf). A ficha e o texto de cada página têm de sair IDÊNTICOS. Uso: python ferramentas/motor_extensao/paridade_ficha.py"""
 import json
 import os
 import subprocess
@@ -46,11 +46,49 @@ def main():
         a = rf.extrair(p)
         b = rf.extrair_paginas_pdf(pp.paginas(json.load(open(p[:-4] + ".json", encoding="utf-8"))), p)
         ja, jb = (json.dumps(x, sort_keys=True, ensure_ascii=False, default=str) for x in (a, b))
-        if ja != jb:
+        import pdfplumber
+        with pdfplumber.open(p) as doc:
+            ta = [x.extract_text() for x in doc.pages]
+        tb = [x.extract_text() for x in pp.paginas(json.load(open(p[:-4] + ".json", encoding="utf-8")))]
+        if ta != tb:
+            difs += 1
+            print("TEXTO DIFERENTE", os.path.basename(p))
+        elif ja != jb:
             difs += 1
             print("DIFERENTE", os.path.basename(p), [k for k in a if json.dumps(a[k], default=str) != json.dumps(b.get(k), default=str)])
     print("ficha disciplinar: %d/%d PDFs com a mesma leitura no pdf.js (navegador) e no pdfplumber (APTO)" % (len(pdfs) - difs, len(pdfs)))
+    difs += rspes(d)
     sys.exit(1 if difs else 0)
+
+
+def rspes(d):
+    """RSPE em PDF (fictício, de casos simulados): o texto das páginas pelo pdf.js tem de ser o do pdfplumber e o painel
+    (rspe_painel.analisar_rspe) tem de sair com a mesma assinatura pelos dois caminhos."""
+    import pdfplumber
+    import rspe_painel as rp
+    import rspe_pdf
+    import rspe_seeu_abas as ra
+    import seeu
+    casos = json.load(open(os.path.join(RAIZ, "casos_simulados", "casos.json"), encoding="utf-8"))
+    pdfs, args = [], []
+    for c in casos[::12]:
+        texto, _ = ra.montar_texto(seeu.abas_dict(c["rspe"]), "12/10/2026")
+        p = rspe_pdf.gerar(os.path.join(d, "rspe_%s.pdf" % c["id"]), texto)
+        pdfs.append(p)
+        args += [p, p[:-4] + ".json"]
+    subprocess.run(["node", os.path.join(RAIZ, "ferramentas", "motor_extensao", "pdf_chars_node.mjs")] + args, check=True)
+    difs = 0
+    for p in pdfs:
+        chars = json.load(open(p[:-4] + ".json", encoding="utf-8"))
+        with pdfplumber.open(p) as doc:
+            ta = [x.extract_text() or "" for x in doc.pages]
+        a = json.loads(rp.analisar_rspe(json.dumps({"textos": ta, "hoje": "12/10/2026"})))
+        b = json.loads(rp.analisar_rspe(json.dumps({"paginas": chars, "hoje": "12/10/2026"})))
+        if ta != [x.extract_text() or "" for x in pp.paginas(chars)] or a.get("erro") or a.get("assinatura") != b.get("assinatura"):
+            difs += 1
+            print("RSPE DIFERENTE", os.path.basename(p), a.get("erro"), b.get("erro"))
+    print("RSPE: %d/%d PDFs com o mesmo texto e o mesmo painel no pdf.js (navegador) e no pdfplumber (APTO)" % (len(pdfs) - difs, len(pdfs)))
+    return difs
 
 
 if __name__ == "__main__":

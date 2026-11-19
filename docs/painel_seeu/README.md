@@ -1,16 +1,18 @@
-# Painel do APTO na página do processo do SEEU (extensão 1.15)
+# Painel do APTO na página do processo do SEEU (extensão 1.16)
 
 O painel aparece à direita da página do processo no SEEU e mostra a análise do APTO **sem precisar do APTO aberto**.
 O SEEU não muda: o painel só reserva a sua largura na página, não clica, não abre aba nem janela.
 
 ## Como funciona
 
-1. **Leitura das abas, em segundo plano, na própria aba do processo.** São lidas as abas Informações Gerais, Informações
-   Adicionais, Partes, Processos Criminais (e a página de cada processo criminal), Eventos e Incidentes (concedidos, não
-   concedidos e pendentes). Só GET, só endereços de leitura do SEEU, um pedido por vez com intervalo, com a sessão de quem
-   está logado (`extensao_seeu/painel/painel_seeu.js`).
-2. **As abas viram o registro no formato do RSPE** (`rspe_seeu_abas.py`) e passam pelo **leitor do APTO sem mudança**
-   (`rspe_scraper.extrair_paginas`): as mesmas derivações valem.
+1. **Leitura do RSPE, em segundo plano, na própria aba do processo.** Toda página do processo no SEEU traz o link do
+   Relatório da Situação Processual Executória (script do botão do relatório). O painel busca esse PDF com a sessão de quem
+   está logado: um único GET, o mesmo do botão, sem abrir nada (`extensao_seeu/painel/painel_seeu.js`). Com o RSPE
+   automático ligado, o mesmo pedido serve aos dois (`APTO.buscarRspe`, em `comum.js`).
+2. **O PDF é lido como o APTO o lê.** O pdf.js tira os caracteres pela lista de operações de desenho (glifo a glifo, como o
+   pdfminer) e `rspe_pdf_paginas.py` reproduz o `extract_text` do pdfplumber; o texto das páginas passa pelo **leitor do APTO
+   sem mudança** (`rspe_scraper.extrair_paginas`), em `rspe_painel.analisar_rspe`. Sem o relatório (link ausente, sessão
+   expirada, outro documento), o painel não conclui nada: diz o que faltou e oferece o diagnóstico (sem dados pessoais).
 3. **O cálculo é o do APTO** (`rspe_motor.py`), os mesmos `.py`, rodando no navegador (Pyodide, Python 3.12).
 4. **O painel** (`rspe_painel.py`) segue a ordem da ficha do assistido no APTO: pena e data-base, marcos (progressão,
    livramento, término), benefícios (indulto, comutação, prescrição, extinção, saída temporária) e os demais pontos
@@ -74,20 +76,16 @@ Nos marcos, a cor diz respeito à **data** (o requisito subjetivo aparece na con
 - `extensao_seeu_testes/teste_painel_e2e.js` (manual): Chromium com a extensão, páginas fictícias servidas por rota:
   nenhuma aba nova, só GET de leitura, mesma assinatura do Python, trocar de aba não refaz a leitura.
 
-## Limite conhecido: o HTML real das abas
+## Por que o RSPE e não as abas
 
-O **visual** do SEEU fictício (`ferramentas/seeu_ficticio/seeu.py`) segue as capturas oficiais
-([TJSP, Informações do processo de execução criminal, 02/2026](https://www.tjsp.jus.br/Download/CapacitacaoSistemas/6.1-SEEU-MP-DPE-Info-Processo-Exec-Criminal_20.02.2026.pdf);
-[TJSP, Mesa de trabalho Promotor/Defensor, 02/2026](https://www.tjsp.jus.br/Download/CapacitacaoSistemas/4.3-SEEU-MP-DPE-Mesa-Trabalho-Promotor-Defensor_20.02.2026.pdf)).
-A **marcação HTML** é suposição: as capturas não mostram o código. O leitor procura pelo texto dos rótulos ("Data Base:",
-"Data do Requisito Temporal:") e dos cabeçalhos das tabelas ("Tipo do Incidente", "Data de Referência"), não pela marcação,
-mas só o HTML real confirma. Pontos a validar com páginas salvas do SEEU (nomes trocados):
+As páginas reais do SEEU (conferidas numa gravação HAR, que não entra no repositório) carregam cada aba por um POST do
+formulário da página, com marcação própria em cada uma (pares `td.label`, variáveis de script no cálculo dos requisitos,
+árvore em script nos processos criminais). Montar o registro a partir delas dependeria de adivinhar cada uma; o RSPE é o
+mesmo documento que o APTO importa, então o painel e o APTO **sempre** chegam ao mesmo resultado. `rspe_seeu_abas.py` fica
+para os testes com o SEEU fictício (o texto do RSPE dos casos simulados).
 
-- endereço de cada aba (o leitor usa o link da própria página: `href`, endereço no `onclick` ou o id `tabXxx`);
-- página de cada processo criminal e onde ficam, por artigo, violência/grave ameaça, hediondez, reincidência e frações;
-- data de nascimento (aba Partes) e "Processos Selecionados" de eventos e incidentes.
-
-O que não for achado não vira dado: fica em branco, e o painel mostra "Não lido nas abas do SEEU" em amarelo.
+Paridade (`ferramentas/motor_extensao/paridade_ficha.py`): fichas do SIAPEN e RSPE fictícios em PDF dão, no pdf.js, o
+**mesmo texto** de página e **o mesmo painel** que no pdfplumber; uma ficha real também foi conferida (fora do repositório).
 
 ## Protótipo
 

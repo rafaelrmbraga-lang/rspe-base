@@ -1,18 +1,19 @@
 // APTO - painel no SEEU: página da extensão dentro da aba do processo (moldura). Sem resultado guardado, pede à página do
-// SEEU (que lê as abas em segundo plano) o HTML das abas e entrega ao motor; mostra o resultado e avisa a página (recolher e
-// contagem da lingueta). Nada aqui fala com o SEEU diretamente.
+// SEEU (que busca em segundo plano o RSPE que o próprio SEEU gera) o PDF do relatório e o entrega ao motor; mostra o resultado
+// e avisa a página (recolher e contagem da lingueta). Nada aqui fala com o SEEU diretamente.
 "use strict";
 const C = self.APTO_PAINEL_CORE;
 const processo = decodeURIComponent((location.hash.match(/p=([^&]+)/) || [])[1] || "");
 const $ = (id) => document.getElementById(id);
 const SEEU = "https://seeu.pje.jus.br";
-let atual = null, esperandoAbas = null, ultimasAbas = null;
+let atual = null, esperandoRspe = null, ultimoRspe = null;
 
 function avisarPagina(d) {
   try { parent.postMessage(d, SEEU); } catch (e) { /* segue */ }
 }
 
 function pintar(res) {
+  if (res && res.diag) res.ext = chrome.runtime.getManifest().version;
   atual = res;
   $("corpo").innerHTML = C.html(res);
   $("corpo").setAttribute("aria-busy", res && res.estado === "carregando" ? "true" : "false");
@@ -32,12 +33,18 @@ window.addEventListener("message", (ev) => {
   if (ev.origin !== SEEU || ev.source !== parent) return;
   const d = ev.data || {};
   if (d.apto === "progresso" && atual && atual.estado === "carregando") pintar(Object.assign({}, atual, { etapa: d.etapa }));
-  if (d.apto === "abas" && esperandoAbas) { esperandoAbas(d); esperandoAbas = null; }
+  if (d.apto === "rspe" && esperandoRspe) { esperandoRspe(d); esperandoRspe = null; }
 });
 
-function pedirAbas() {
-  return new Promise((ok) => { esperandoAbas = ok; avisarPagina({ apto: "lerAbas" }); });
+function pedirRspe(novo) {
+  return new Promise((ok) => { esperandoRspe = ok; avisarPagina({ apto: "lerRspe", novo: !!novo }); });
 }
+const FALHA_RSPE = {
+  sem_link: ["sem_rspe", "O link do relatório da situação processual não está nesta página do SEEU. Abra o processo pela consulta e clique em Ler de novo."],
+  http: ["sem_dados", "O SEEU não entregou o relatório da situação processual (erro no SEEU ou sessão expirada). Recarregue a página e clique em Ler de novo."],
+  nao_pdf: ["sem_dados", "O SEEU não devolveu o relatório em PDF (sessão expirada?). Recarregue a página do SEEU e clique em Ler de novo."],
+  sem_resposta: ["sem_dados", "O SEEU não respondeu ao pedido do relatório. Confira a conexão e clique em Ler de novo."],
+};
 
 async function analisar(forcar) {
   const b = $("atualizar");
@@ -49,14 +56,18 @@ async function analisar(forcar) {
       if (g) return pintar(g);
     }
     const primeira = !(await chrome.storage.session.get("painelMotorPronto")).painelMotorPronto;
-    pintar({ estado: "carregando", primeira, etapa: "Lendo as abas do processo" });
-    chrome.runtime.sendMessage({ tipo: "painelPreparar" }).catch(() => null);   // o motor carrega enquanto as abas chegam
-    const d = forcar === "ficha" && ultimasAbas ? { abas: ultimasAbas } : await pedirAbas();
-    if (d.abas) ultimasAbas = d.abas;
-    if (!d.abas) return pintar({ estado: "sem_dados", motivo: d.erro ? "Não foi possível ler as abas: " + d.erro : "" });
-    pintar(Object.assign({}, atual, { etapa: "Calculando com as regras do APTO" }));
+    pintar({ estado: "carregando", primeira, etapa: "Buscando o relatório da situação processual no SEEU" });
+    chrome.runtime.sendMessage({ tipo: "painelPreparar" }).catch(() => null);   // o motor carrega enquanto o relatório chega
+    const d = forcar === "ficha" && ultimoRspe ? ultimoRspe : await pedirRspe(forcar === true);
+    if (!d.b64) {
+      const [estado, motivo] = FALHA_RSPE[d.erro] || ["sem_dados", ""];
+      return pintar({ estado, motivo, diag: d.diag || null });
+    }
+    ultimoRspe = d;
+    pintar(Object.assign({}, atual, { etapa: "Lendo o relatório e calculando com as regras do APTO" }));
     let res;
-    try { res = await chrome.runtime.sendMessage({ tipo: "painelAnalisar", processo, abas: d.abas }); } catch (e) { res = null; }
+    try { res = await chrome.runtime.sendMessage({ tipo: "painelAnalisar", processo, b64: d.b64 }); } catch (e) { res = null; }
+    if (res && res.estado !== "ok") res.diag = Object.assign({}, d.diag || {}, { motor: res.estado });
     res = res || { estado: "erro", motivo: "a extensão não respondeu: recarregue a página do SEEU" };
     if (res.estado === "ok") await chrome.storage.session.set({ painelMotorPronto: true });
     pintar(res);
@@ -94,9 +105,8 @@ $("corpo").addEventListener("click", async (e) => {
   if (!b) return;
   if (b.dataset.acao === "ficha-carregar") $("arquivoFicha").click();
   if (b.dataset.acao === "copiar-diag") {
-    const dg = atual && (atual.diag || (atual.painel && atual.painel.diag));
-    const txt = JSON.stringify({ extensao: chrome.runtime.getManifest().version, diagnostico: dg || null }, null, 1);
-    try { await navigator.clipboard.writeText(txt); aviso("Diagnóstico copiado (sem dados pessoais)."); } catch (e) { aviso("Não foi possível copiar."); }
+    const campo = $("corpo").querySelector(".diag textarea");
+    aviso((await copiar(campo ? campo.value : "", campo)) ? "Diagnóstico copiado (sem dados pessoais)." : "Selecione o texto do diagnóstico e copie com Ctrl+C.");
   }
   if (b.dataset.acao === "ficha-retirar") {
     await chrome.runtime.sendMessage({ tipo: "painelFichaRetirar", processo }).catch(() => null);
@@ -116,9 +126,21 @@ document.addEventListener("drop", (e) => {
   enviarFicha(e.dataTransfer.files && e.dataTransfer.files[0]);
 });
 $("recolher").addEventListener("click", () => avisarPagina({ apto: "recolher" }));
+// copiar: a área de transferência pela API e, se a página do SEEU não deixar, pelo comando de cópia sobre um campo de texto
+async function copiar(txt, campo) {
+  try { await navigator.clipboard.writeText(txt); return true; } catch (e) { /* segue para o comando de cópia */ }
+  let el = campo, temp = false;
+  if (!el) { el = document.createElement("textarea"); el.value = txt; el.setAttribute("readonly", ""); el.style.cssText = "position:fixed;left:-9999px;top:0"; document.body.appendChild(el); temp = true; }
+  el.focus();
+  el.select();
+  let ok = false;
+  try { ok = document.execCommand("copy"); } catch (e) { ok = false; }
+  if (temp) el.remove();
+  return ok;
+}
 $("copiar").addEventListener("click", async () => {
   if (!atual) return;
-  try { await navigator.clipboard.writeText(C.resumo(atual)); $("copiar").textContent = "Copiado"; } catch (e) { $("copiar").textContent = "Não copiou"; }
+  $("copiar").textContent = (await copiar(C.resumo(atual))) ? "Copiado" : "Não copiou";
   setTimeout(() => { $("copiar").textContent = "Copiar"; }, 2000);
 });
 

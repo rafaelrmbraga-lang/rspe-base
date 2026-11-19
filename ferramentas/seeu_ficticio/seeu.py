@@ -228,13 +228,24 @@ def processo_criminal(r, k):
                                                                       "Extinto", "Suspensão da Pena", "Data da Extinção"], art))
 
 
+# o link do RSPE, como o SEEU o põe em todas as páginas do processo (script do botão do relatório)
+URL_RSPE = ("/seeu/processo/criminal/execucao/processoExecucaoPenal.do?actionType=emitirRelatorioSituacaoProcessualExecutoria"
+            "&report=relatorioSituacaoProcessualExecutoriaV2&idProcessoExecucaoPenal=%s")
+
+
+def id_execucao(r):
+    """Identificador interno (fictício) do processo de execução no SEEU, a partir do número."""
+    return "1000000" + re.sub(r"\D", "", r.get("processo_execucao") or "")[:8]
+
+
 def pagina(r, aba="tabInformacoesAdicionais", corpo=None):
     """Página inteira do processo, como o navegador a recebe (capa + abas + a aba pedida)."""
     return f"""<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><title>SEEU - Sistema Eletrônico de Execução Unificado</title><style>{CSS}</style></head>
 <body><div class="topo"><span class="marca"><i></i>seeu</span><span class="cnj">CNJ</span><span class="teste">Atenção! Você está em um ambiente de testes.</span>
 <span class="orgao">{ESC(r.get('tribunal') or 'TJMS')} - Defensoria Pública (fictício) ▾</span><span class="icones"><span></span><span></span><span></span><span></span></span><span class="usuario">Defensor Exemplo</span></div>
 <div class="menu"><span>⌕</span><span>Início</span><span>Processos</span><span>Audiências</span><span>Outros</span></div>
-<div class="conteudo">{capa(r)}{abas(r, aba)}<div class="corpo-aba" id="{aba}Conteudo">{corpo if corpo is not None else aba_conteudo(r, aba)}</div></div></body></html>"""
+<div class="conteudo">{capa(r)}{abas(r, aba)}<div class="corpo-aba" id="{aba}Conteudo">{corpo if corpo is not None else aba_conteudo(r, aba)}</div></div>
+<script>function gerarResa() {{ openDialog('{URL_RSPE % id_execucao(r)}','Visualizar Pdf',600,470); }}</script></body></html>"""
 
 
 def abas_dict(r):

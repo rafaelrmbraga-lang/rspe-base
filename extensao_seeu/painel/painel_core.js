@@ -31,7 +31,7 @@
         `<small>Arraste o PDF da ficha do SIAPEN para cá, ou abra a ficha no SIAPEN.</small></span>` +
         `<span class="ficha-acoes"><button type="button" class="btn-f" data-acao="ficha-carregar">Carregar a ficha (PDF)</button></span></div>`;
     }
-    return `<div class="fonte" role="note"><span>Regras do APTO sobre os dados das abas do SEEU · referência ${esc(p.hoje || "")}</span></div>` + fic;
+    return `<div class="fonte" role="note"><span>Regras do APTO sobre o relatório da situação processual do SEEU · referência ${esc(p.hoje || "")}</span></div>` + fic;
   }
 
   function pena(p) {
@@ -71,10 +71,13 @@
         `${it.fundamento ? `<div class="fund">${esc(it.fundamento)}</div>` : ""}</details>` : "") + `</li>`;
   }
 
-  // diagnóstico da leitura (só a estrutura das abas: rótulos, títulos, cabeçalhos e contagens; nenhum dado pessoal)
-  function diagnostico() {
+  // diagnóstico da leitura (só a estrutura: onde o painel roda, se achou o link do relatório, a resposta do SEEU; nenhum dado
+  // do processo ou da pessoa), num campo de texto que dá para selecionar mesmo se o copiar for bloqueado
+  function diagnostico(dg, ext) {
+    const txt = JSON.stringify({ extensao: ext || "", diagnostico: dg || null }, null, 1);
     return `<div class="diag"><p>Para ajustar a leitura ao SEEU, copie o diagnóstico e envie a quem mantém a extensão. Ele traz só a ` +
-      `estrutura das abas (nomes dos campos e das colunas, quantidades), sem nenhum dado do processo ou da pessoa.</p>` +
+      `estrutura da leitura (onde o painel roda, se o link do relatório foi achado e a resposta do SEEU), sem nenhum dado do processo ou da pessoa.</p>` +
+      `<textarea readonly rows="5" aria-label="Diagnóstico da leitura" spellcheck="false">${esc(txt)}</textarea>` +
       `<button type="button" class="btn-f" data-acao="copiar-diag">Copiar o diagnóstico</button></div>`;
   }
 
@@ -92,7 +95,6 @@
       h += `<section aria-labelledby="s-crimes"><h2 id="s-crimes">Crimes em execução</h2><ul class="crimes">` +
         p.crimes.map((c) => `<li><b>${esc(c.texto)}</b>${c.pena ? ` · ${esc(c.pena)}` : ""}${c.hediondo && /verificar/.test(c.hediondo) ? ` <span class="selo-st amarelo">${ICO.amarelo}hediondo a conferir</span>` : ""}</li>`).join("") + `</ul></section>`;
     }
-    if (p.diag) h += `<details class="naocabe"><summary>Leitura das abas incompleta</summary>${diagnostico()}</details>`;
     if ((p.nao_cabe || []).length) {
       h += `<details class="naocabe"><summary>Não cabe: ${p.nao_cabe.length} ${p.nao_cabe.length === 1 ? "hipótese afastada" : "hipóteses afastadas"}</summary><ul>` +
         p.nao_cabe.map((x) => `<li><b>${esc(x.titulo)}</b>: ${esc(x.motivo)}</li>`).join("") + `</ul></details>`;
@@ -100,8 +102,11 @@
     return h;
   }
 
+  // sem o relatório lido por inteiro, o painel não conclui nada: só diz o que faltou e como resolver
   const AVISO = {
-    sem_dados: ["Não foi possível ler o processo", "O SEEU não entregou as abas do processo (sessão expirada ou página diferente). Recarregue a página do SEEU e clique em Ler de novo."],
+    sem_dados: ["Não foi possível ler o processo", "O SEEU não entregou o relatório da situação processual. Recarregue a página do SEEU e clique em Ler de novo."],
+    sem_rspe: ["Relatório do processo não encontrado", ""],
+    nao_rspe: ["O SEEU devolveu outro documento", "O PDF recebido não é o relatório da situação processual executória."],
     erro: ["Não foi possível montar a análise", ""],
   };
 
@@ -114,7 +119,8 @@
       const [t, d] = AVISO[res.estado];
       return `<div class="aviso" role="status"><b>${esc(t)}</b><p>${esc(res.motivo || d)}</p>` +
         ((res.faltou || []).length ? `<p class="aviso-f">Não achado: ${res.faltou.map(esc).join("; ")}.</p>` : "") +
-        (res.diag ? diagnostico() : "") + `</div>`;
+        `<p class="aviso-f">Nenhuma conclusão foi tirada: sem o relatório lido, nada é calculado.</p>` +
+        (res.diag ? diagnostico(res.diag, res.ext) : "") + `</div>`;
     }
     return corpo(res);
   }

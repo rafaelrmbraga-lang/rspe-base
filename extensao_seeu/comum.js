@@ -68,6 +68,18 @@
   }
 
   // os primeiros bytes são de um PDF?
+  // o RSPE da página aberta é buscado UMA vez e servido a quem pedir (o RSPE automático e o painel do processo): um só pedido
+  // ao SEEU por carregamento. "novo" busca de novo (Ler de novo, baixar de novo); resposta com erro não fica guardada.
+  const _rspe = (raiz.__aptoRspeMemo = raiz.__aptoRspeMemo || {});   // o comum.js pode ser injetado mais de uma vez na mesma moldura
+  function buscarRspe(url, novo) {
+    if (novo || !_rspe[url]) {
+      _rspe[url] = fetch(url, { credentials: "include", cache: "no-store" })
+        .then(async (r) => ({ ok: r.ok, status: r.status, tipo: r.headers.get("content-type") || "", bytes: new Uint8Array(await r.arrayBuffer()) }));
+      _rspe[url].then((x) => { if (!x.ok) delete _rspe[url]; }, () => { delete _rspe[url]; });
+    }
+    return _rspe[url];
+  }
+
   function ehPdf(bytes) {
     return bytes && bytes.length > 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
   }
@@ -174,7 +186,7 @@
     return "endereço não permitido na triagem";
   }
 
-  const api = { RE_CNJ, cnjsNoTexto, pessoasDaLista, RE_RSPE, ACAO_RSPE, cnj, pastaSegura, hojeISO, caminhoArquivo, urlRspeValida, urlRspeDoId, rspeNoHtml, ehPdf, chaveDia, caminhoFicha, chaveFicha, pedidoTriagemPermitido };
+  const api = { RE_CNJ, cnjsNoTexto, pessoasDaLista, RE_RSPE, ACAO_RSPE, cnj, pastaSegura, hojeISO, caminhoArquivo, urlRspeValida, urlRspeDoId, rspeNoHtml, buscarRspe, ehPdf, chaveDia, caminhoFicha, chaveFicha, pedidoTriagemPermitido };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else raiz.APTO = api;
 })(typeof self !== "undefined" ? self : this);

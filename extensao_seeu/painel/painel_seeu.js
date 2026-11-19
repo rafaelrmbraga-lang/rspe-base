@@ -2,8 +2,9 @@
 // Não clica, não navega, não abre aba nem janela e não muda nada do SEEU: o painel é uma moldura da própria extensão (estilo
 // isolado do SEEU e do AZflow) e, aberto, reserva a sua largura na página (nada do SEEU fica coberto). Recolhido, vira uma
 // lingueta na borda com a contagem do que é para conferir. O estado (aberto/recolhido) é lembrado.
-// Leitura (sem o APTO): as abas do processo são buscadas em segundo plano, nesta mesma aba e com a sessão de quem está
-// logado - só GET, só endereços de leitura do SEEU, um pedido por vez com intervalo - e o HTML vai para o motor da extensão.
+// Leitura (sem o APTO): o RSPE (Relatório da Situação Processual Executória) que o próprio SEEU gera para este processo - o
+// link está na página - é buscado em segundo plano, nesta mesma aba e com a sessão de quem está logado: um único GET, o mesmo
+// que o botão do relatório faz, sem abrir nada. O PDF vai para o motor da extensão, que o lê com o leitor do APTO.
 (function () {
   "use strict";
   if (window.__aptoPainel) return;
@@ -13,9 +14,6 @@
   const A = self.APTO;
   const LARG = 392;
   const ORIGEM = chrome.runtime.getURL("").replace(/\/$/, "");
-  const INTERVALO_MS = 350;   // entre dois pedidos ao SEEU
-  const MAX_CRIM = 30;        // páginas de processo criminal por leitura
-
   // ---------- número do processo
   function processoDaPagina() {
     const campo = document.getElementById("processoNumeroFormatado") || document.querySelector("input[name=processoNumeroFormatado]");
@@ -30,78 +28,33 @@
     return "";
   }
 
-  // ---------- leitura das abas (só leitura)
-  const ABAS = { gerais: /^Informa[çc][õo]es Gerais/i, adicionais: /^Informa[çc][õo]es Adicionais/i, partes: /^Partes\b/i,
-    criminais: /^Processos Criminais/i, eventos: /^Eventos\b/i, concedidos: /^Incidentes Concedidos/i,
-    nao_concedidos: /^Incidentes N[ãa]o.?Concedidos/i, pendentes: /^Incidentes Pendentes/i };
-  const BLOQUEADO = /preAnalise|leitura|dispensar|assinar|movimentar|peticion|juntar|salvar|excluir|remover|alterar|atualizar|cadastr|enviar|devolver|descartar|arquivar/i;
-
-  function permitido(url) {
-    try {
-      const u = new URL(url, location.href);
-      return u.origin === location.origin && u.pathname.startsWith("/seeu/") && /\.do$/i.test(u.pathname) && !BLOQUEADO.test(u.pathname + u.search);
-    } catch (e) { return false; }
+  // ---------- leitura do RSPE (só leitura: o relatório que o SEEU emite para o processo aberto)
+  function base64(bytes) {
+    let t = "";
+    for (let i = 0; i < bytes.length; i += 0x8000) t += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(t);
   }
-  // endereço de uma aba a partir do próprio link da página (href, ou o endereço dentro do onclick, ou o id "tabXxx")
-  function urlDoLink(a) {
-    const h = a.getAttribute("href") || "";
-    if (h && !/^(#|javascript:)/i.test(h)) return new URL(h, location.href).href;
-    const oc = a.getAttribute("onclick") || "";
-    const m = /['"]([^'"]*\.do\?[^'"]*)['"]/.exec(oc);
-    if (m) return new URL(m[1], location.href).href;
-    const id = (a.id || a.getAttribute("data-tab") || (/(tab[A-Z]\w+)/.exec(oc + " " + h) || [])[1] || "");
-    if (/^tab[A-Z]\w+$/.test(id)) return new URL("/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=" + id, location.href).href;
-    return "";
-  }
-  function linksDasAbas(doc) {
-    const out = {};
-    for (const a of doc.querySelectorAll("a")) {
-      const t = (a.textContent || "").replace(/\s+/g, " ").trim();
-      for (const [k, rx] of Object.entries(ABAS)) if (!out[k] && rx.test(t)) { const u = urlDoLink(a); if (u && permitido(u)) out[k] = u; }
-    }
-    return out;
-  }
-  const espera = (ms) => new Promise((r) => setTimeout(r, ms));
-  async function buscar(url) {
-    if (!permitido(url)) throw new Error("endereço fora da leitura permitida");
-    const r = await fetch(url, { credentials: "include", cache: "no-store" });
-    if (!r.ok) throw new Error("o SEEU respondeu " + r.status);
-    const buf = await r.arrayBuffer();
-    const cs = (/charset=([\w-]+)/i.exec(r.headers.get("content-type") || "") || [])[1];
-    try { return new TextDecoder(cs || "utf-8", { fatal: !cs }).decode(buf); } catch (e) { return new TextDecoder("windows-1252").decode(buf); }
-  }
+  // diagnóstico sem dados pessoais: onde o painel roda, se o link do relatório foi achado, a resposta do SEEU (código, tipo,
+  // tamanho) - nunca o número, o nome ou o conteúdo
   let lendo = null;
-  async function lerAbas(progresso) {
+  async function lerRspe(progresso, novo) {
     if (lendo) return lendo;
     lendo = (async () => {
-      const abas = { capa: document.documentElement.outerHTML, processo: processoDaPagina() };
-      const links = linksDasAbas(document);
-      const chaves = Object.keys(ABAS).filter((k) => links[k]);
-      // para o diagnóstico (sem dados pessoais): que abas foram achadas, por qual endereço (sem os parâmetros) e o que falhou
-      const coleta = { achadas: chaves, nao_achadas: Object.keys(ABAS).filter((k) => !links[k]), falhas: {},
-        enderecos: Object.fromEntries(chaves.map((k) => { try { const u = new URL(links[k]); return [k, u.pathname + "?" + [...u.searchParams.keys()].join("&")]; } catch (e) { return [k, "?"]; } })),
-        links_na_pagina: [...document.querySelectorAll("a")].filter((a) => /^(Informa|Partes|Processos Crim|Eventos|Incidentes)/i.test((a.textContent || "").trim()))
-          .slice(0, 12).map((a) => ({ texto: (a.textContent || "").trim().slice(0, 40), href: (a.getAttribute("href") || "").replace(/[?#].*$/, "").slice(0, 80) || "(vazio)",
-            onclick: !!a.getAttribute("onclick"), id: (a.id || "").slice(0, 40) })) };
-      let n = 0;
-      for (const k of chaves) {
-        progresso("Lendo as abas do processo (" + (++n) + " de " + chaves.length + ")");
-        try { abas[k] = await buscar(links[k]); } catch (e) { coleta.falhas[k] = String((e && e.message) || e).slice(0, 80); }
-        await espera(INTERVALO_MS);
+      const diag = { quadro: window === window.top ? "página" : "moldura", pagina: location.pathname };
+      const rs = A.rspeNoHtml(document.documentElement ? document.documentElement.innerHTML : "");
+      diag.link_rspe = !!rs;
+      if (!rs) return { erro: "sem_link", diag };
+      diag.relatorio = rs.report || "(padrão)";
+      progresso("Gerando o relatório da situação processual no SEEU");
+      let r;
+      try { r = await A.buscarRspe(A.urlRspeDoId(rs.id, rs.report), novo); } catch (e) {
+        diag.falha = String((e && e.message) || e).slice(0, 80);
+        return { erro: "sem_resposta", diag };
       }
-      abas._coleta = JSON.stringify(coleta);
-      if (abas.criminais) {
-        const doc = new DOMParser().parseFromString(abas.criminais, "text/html");
-        const urls = [...doc.querySelectorAll("a")].filter((a) => /^Processo Criminal\b/i.test((a.textContent || "").trim()))
-          .map(urlDoLink).filter((u) => u && permitido(u)).slice(0, MAX_CRIM);
-        let i = 0;
-        for (const u of urls) {
-          progresso("Lendo os processos criminais (" + (i + 1) + " de " + urls.length + ")");
-          try { abas["crim:" + (++i)] = await buscar(u); } catch (e) { /* processo que falhou fica de fora */ }
-          await espera(INTERVALO_MS);
-        }
-      }
-      return abas;
+      const bytes = r.bytes;
+      Object.assign(diag, { status: r.status, tipo: r.tipo.slice(0, 40), tamanho_kb: Math.round(bytes.length / 1024), pdf: A.ehPdf(bytes) });
+      if (!r.ok || !A.ehPdf(bytes)) return { erro: r.ok ? "nao_pdf" : "http", diag };
+      return { b64: base64(bytes), diag };
     })().finally(() => { lendo = null; });
     return lendo;
   }
@@ -137,7 +90,7 @@
       .n{background:#F8F0D8;color:#765C00;border-radius:10px;font-size:11.5px;padding:2px 5px;min-width:16px;text-align:center}
       [hidden]{display:none!important}
     </style>
-    <iframe class="moldura" title="Análise do APTO" hidden></iframe>
+    <iframe class="moldura" title="Análise do APTO" allow="clipboard-write" hidden></iframe>
     <button class="lingueta" type="button" hidden></button>`;
     moldura = raiz.querySelector(".moldura");
     lingueta = raiz.querySelector(".lingueta");
@@ -160,19 +113,16 @@
   }
   const paraPainel = (d) => { try { moldura.contentWindow.postMessage(d, ORIGEM); } catch (e) { /* segue */ } };
 
-  // a moldura pede as abas (ao abrir, sem resultado guardado, ou no "Ler de novo"), recolhe e manda a contagem
+  // a moldura pede o relatório (ao abrir, sem resultado guardado, ou no "Ler de novo"), recolhe e manda a contagem
   window.addEventListener("message", async (ev) => {
     if (ev.origin !== ORIGEM || !moldura || ev.source !== moldura.contentWindow) return;
     const d = ev.data || {};
     if (d.apto === "recolher") abrir(false);
     if (d.apto === "contagem" && d.c) { contagem = d.c; if (!lingueta.hidden) pintarLingueta(); }
-    if (d.apto === "lerAbas") {
-      try {
-        const abas = await lerAbas((etapa) => paraPainel({ apto: "progresso", etapa }));
-        paraPainel({ apto: "abas", abas });
-      } catch (e) {
-        paraPainel({ apto: "abas", abas: null, erro: String((e && e.message) || e) });
-      }
+    if (d.apto === "lerRspe") {
+      let x;
+      try { x = await lerRspe((etapa) => paraPainel({ apto: "progresso", etapa }), !!d.novo); } catch (e) { x = { erro: "falha", diag: { falha: String((e && e.message) || e).slice(0, 80) } }; }
+      paraPainel(Object.assign({ apto: "rspe" }, x));
     }
   });
 

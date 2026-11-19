@@ -1,6 +1,6 @@
 // APTO - painel no SEEU, lado do service worker (Chrome/Edge) ou da página de fundo (Firefox). Não depende do APTO:
-// recebe da página do painel o HTML das abas do processo (lido na própria aba do SEEU) e o entrega ao motor da extensão
-// (os mesmos .py do APTO no Pyodide). O resultado fica guardado só na sessão do navegador (chrome.storage.session, some ao
+// recebe da página do painel o RSPE do processo (o relatório que o próprio SEEU gera, buscado na aba do SEEU, com a sessão de
+// quem está logado) e o entrega ao motor da extensão (os mesmos .py do APTO no Pyodide, o mesmo leitor do RSPE). O resultado fica guardado só na sessão do navegador (chrome.storage.session, some ao
 // fechar o navegador) por 10 minutos, porque o SEEU recarrega a página a cada aba: trocar de aba não refaz a leitura.
 // Ficha disciplinar: a carregada no painel (por processo) e as abertas no SIAPEN nesta sessão (com a ficha automática ligada)
 // são lidas pelo motor (pdf.js + o leitor do APTO) e entram na análise; o motor só usa a ficha que for desta pessoa.
@@ -24,18 +24,21 @@ self.APTO_PAINEL = (() => {
   async function motor(tipo, texto, extra) {
     if (chrome.offscreen) {
       await garantirOffscreen();
-      return chrome.runtime.sendMessage(Object.assign({ alvo: "motor", tipo, texto }, extra || {}));
+      // o documento recém-criado leva um instante para começar a ouvir: tenta de novo por alguns segundos
+      for (let i = 0; ; i++) {
+        try { return await chrome.runtime.sendMessage(Object.assign({ alvo: "motor", tipo, texto }, extra || {})); } catch (e) {
+          if (i >= 40 || !/Receiving end does not exist|Could not establish connection/i.test(String((e && e.message) || e))) throw e;
+          await new Promise((r) => setTimeout(r, 150));
+        }
+      }
     }
     const m = await import(chrome.runtime.getURL("painel/motor.js"));
     if (tipo === "carregar") return m.carregar().then((x) => ({ ok: true, carga: x.carga, info: x.info }));
     if (tipo === "resumo") return m.resumo(extra.processo);
     if (tipo === "resumoPdf") return m.resumoPdf(extra.d, extra.canhoto);
-    if (tipo === "ficha") {
-      const bin = atob(extra.b64), bytes = new Uint8Array(bin.length);
-      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-      return m.lerFicha(bytes, extra.arquivo);
-    }
-    return m.analisar(texto);
+    const bin = atob(extra.b64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return tipo === "ficha" ? m.lerFicha(bytes, extra.arquivo) : m.analisarRspe(bytes, extra.extra);
   }
 
   // ---------- fichas disciplinares (só na sessão)
@@ -87,17 +90,23 @@ self.APTO_PAINEL = (() => {
       ? Object.assign({}, g.resultado, { guardado: true }) : null;
   }
 
-  async function analisar(processo, abas) {
+  async function sha1(b64) {
+    const bin = atob(b64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return [...new Uint8Array(await crypto.subtle.digest("SHA-1", bytes))].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function analisar(processo, b64) {
     const dig = digitos(processo);
     if (dig.length !== 20) return { estado: "erro", motivo: "número de processo não identificado na página" };
-    if (!abas || !abas.capa) return { estado: "sem_dados" };
+    if (!b64) return { estado: "sem_dados" };
     const fic = await fichasPara(dig);
     let m;
-    try { m = await motor("analisar", JSON.stringify({ abas, hoje: hojeBR(), fichas: fic.lista })); } catch (e) { m = { ok: false, erro: String((e && e.message) || e) }; }
+    try { m = await motor("rspe", "", { b64, extra: { hoje: hojeBR(), fichas: fic.lista, hash: await sha1(b64) } }); } catch (e) { m = { ok: false, erro: String((e && e.message) || e) }; }
     if (!m || !m.ok) return { estado: "erro", motivo: "o motor da extensão falhou: " + ((m && m.erro) || "sem resposta") };
     const painel = JSON.parse(m.painel);
-    if (painel.erro) return { estado: "sem_dados", faltou: painel.faltou || [], diag: painel.diag || null };
-    if (digitos(painel.processo) !== dig) return { estado: "erro", motivo: "as abas lidas são de outro processo (" + painel.processo + "): recarregue a página do SEEU" };
+    if (painel.erro) return { estado: "nao_rspe", motivo: painel.motivo || "" };
+    if (digitos(painel.processo) !== dig) return { estado: "erro", motivo: "o relatório lido é de outro processo (" + painel.processo + "): recarregue a página do SEEU" };
     const resultado = { estado: "ok", painel, motor: m.info, ms: m.ms, carga: m.carga, quando: Date.now(),
       fichaCarregada: fic.doPainel ? { resumo: fic.doPainel.resumo, arquivo: fic.doPainel.arquivo } : null };
     await chrome.storage.session.set({ ["painel:" + dig]: { quando: Date.now(), hoje: hojeBR(), fichas: await versaoFichas(), resultado } });
@@ -110,7 +119,7 @@ self.APTO_PAINEL = (() => {
   }
   async function mensagem(msg) {
     if (msg.tipo === "painelGuardado") return (await guardado(msg.processo)) || null;
-    if (msg.tipo === "painelAnalisar") return analisar(msg.processo, msg.abas);
+    if (msg.tipo === "painelAnalisar") return analisar(msg.processo, msg.b64);
     if (msg.tipo === "painelResumo") {
       try { return await motor("resumo", "", { processo: digitos(msg.processo) }); } catch (e) { return { ok: false, erro: String(e) }; }
     }

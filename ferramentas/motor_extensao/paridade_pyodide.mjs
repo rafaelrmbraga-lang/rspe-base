@@ -1,5 +1,5 @@
 // Paridade navegador x APTO, lado da extensão: carrega o Pyodide e os arquivos do motor DO PACOTE da extensão
-// (extensao_seeu/motor), lê as MESMAS abas de cada caso e compara a assinatura com a do CPython. Uma diferença = falha (o
+// (extensao_seeu/motor), lê o MESMO texto do RSPE de cada caso e compara a assinatura com a do CPython. Uma diferença = falha (o
 // build não segue). Uso: node ferramentas/motor_extensao/paridade_pyodide.mjs esperado.json
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -23,7 +23,7 @@ py.runPython(`import sys; sys.path.insert(0, "/motor")
 import rspe_motor, rspe_painel
 rspe_motor.VERSAO = ${JSON.stringify(info.versao)}`);
 const t2 = Date.now();
-const analisar = py.globals.get("rspe_painel").analisar_abas;
+const analisar = py.globals.get("rspe_painel").analisar_rspe;
 const ids = Object.keys(esperado.casos);
 let difs = 0;
 for (const id of ids) {

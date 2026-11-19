@@ -170,6 +170,17 @@ async function podeBaixar(processo, forcar, lote) {
   if (naHora >= teto && !forcar) return { ok: false, motivo: `limite de ${teto} downloads ${lote ? "do lote" : "automáticos"} por hora - pausada` };
   return { ok: true, chave, cfg: c };
 }
+// o "já baixado" só é marcado quando o download termina: trocar de aba antes disso não pede o mesmo RSPE de novo ao SEEU
+// (só no RSPE automático, antes de a página buscar o PDF)
+const emCurso = {};
+const EM_CURSO_MS = 60 * 1000;
+async function podeBaixarAgora(processo, forcar, lote) {
+  const r = await podeBaixar(processo, forcar, lote);
+  if (!r.ok || forcar || lote) return r;
+  if (emCurso[r.chave] > Date.now() - EM_CURSO_MS) return { ok: false, motivo: "já baixando", repetido: true };
+  emCurso[r.chave] = Date.now();
+  return r;
+}
 
 // PDF já buscado pela página (com a sessão do SEEU): grava na pasta da base
 async function gravarPdf(msg, sender) {
@@ -575,7 +586,7 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
       }
       if (msg.tipo === "cfg") return responder(await cfg());
       if (daPagina && msg.tipo === "podeBaixar") {
-        const r = await podeBaixar(A.cnj(msg.processo), msg.forcar, msg.lote);
+        const r = await podeBaixarAgora(A.cnj(msg.processo), msg.forcar, msg.lote);
         return responder({ ok: r.ok, motivo: r.motivo, repetido: r.repetido });
       }
       if (daPagina && msg.tipo === "rspePdf") return responder(await gravarPdf(msg, sender));
