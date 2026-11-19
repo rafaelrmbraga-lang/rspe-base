@@ -47,7 +47,10 @@ ok(M(["PROMOTOR"], "JUNTADA DE MANIFESTAÇÃO") === "mp" && M(["PROMOTOR", "SEMA
 ok(M(["DEFENSOR"], "JUNTADA DE MANIFESTAÇÃO") === "defensoria" && M(["OUTROS"], "JUNTADA DE OFÍCIO - DEPEN", "Depen/Seap") === "unidade", "movimentações: Defensoria e unidade prisional");
 ok(M(["SERVIDOR"], "REMETIDOS OS AUTOS PARA DEPEN") === "cartorio" && M(["JUIZ"], "RETIFICADO O MOVIMENTO CONCLUSOS PARA DECISÃO") === "cartorio" &&
   M(["SERVIDOR"], "JUNTADA DE GUIA DE RECOLHIMENTO - CARTA DE GUIA") === "cartorio", "movimentações: cartório (laranja)");
-ok(M(["ADVOGADO"], "JUNTADA DE PETIÇÃO DE MANIFESTAÇÃO") === "advogado" && M(["OUTROS"], "JUNTADA DE PETIÇÃO DE INICIAL") === "advogado", "movimentações: advogado (roxo)");
+ok(M(["ADVOGADO"], "JUNTADA DE PETIÇÃO DE MANIFESTAÇÃO") === "advogado" && M(["OUTROS"], "JUNTADA DE PETIÇÃO DE INICIAL") === "outro", "movimentações: advogado (roxo) só pelo grupo ou cargo");
+ok(M(["OUTROS"], "JUNTADA DE PETIÇÃO DE MANIFESTAÇÃO", "Apoio Especializado") === "pericia" && M(["OUTROS"], "JUNTADA DE LAUDO", "Apoio Especializado") === "pericia",
+  "movimentações: apoio especializado (perícia) não é advogado");
+ok(M(["OUTROS"], "JUNTADA DE CIÊNCIA", "Depen/Seap") === "unidade", "movimentações: o que a Depen movimenta fica em amarelo");
 ok(/data-abrir="1"[^>]*>[\s\S]*?conferir<\/button>/.test(ch) === !!res.painel.contagem.amarelo, "chip do que falta conferir abre o painel");
 ok(!C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { nome: "<b>x</b>" }) }), true).includes("<b>x</b>"), "chips: texto escapado");
 const chm = C.chips(C.dadosChips(res), false);

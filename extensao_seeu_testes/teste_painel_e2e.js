@@ -88,7 +88,12 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     const nseg = await pg.locator("#apto-chips button.sg").count();
     ok(nseg >= 2, id + ": chips com os marcos (" + nseg + ")");
     // saída temporária / progressão antecipada: o checklist dos requisitos aparece ao passar o mouse
-    const comPop = pg.locator("#apto-chips .benw:has(.pop)");
+    // marco: ao passar o mouse, a caixa com a data, quanto falta/desde quando e o ponto a conferir
+    const mc = pg.locator("#apto-chips .seg .mw").first();
+    await mc.hover();
+    ok(await mc.locator(".pop").isVisible() && /\d{2}\/\d{2}\/\d{4}/.test(await mc.locator(".pop").textContent()), id + ": caixa do marco ao passar o mouse");
+    await pg.mouse.move(5, 700);
+    const comPop = pg.locator("#apto-chips .bens .benw:has(.pop)");
     if (await comPop.count()) {
       await comPop.first().hover();
       ok(await comPop.first().locator(".pop").isVisible(), id + ": checklist dos requisitos ao passar o mouse");

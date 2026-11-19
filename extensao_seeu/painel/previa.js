@@ -4,7 +4,7 @@
 const SEEU = "https://seeu.pje.jus.br";
 const MAX_PAG = location.hash.includes("doc=") ? 300 : 12;
 const $p = document.getElementById("paginas");
-let pdfjs = null, atual = 0, ultimo = null;
+let pdfjs = null, atual = 0, ultimo = null, zoom = 1;
 
 function msg(t, d) { $p.innerHTML = `<div class="msg"><b>${t}</b>${d || ""}</div>`; }
 const ehPdf = (b) => b.length > 4 && b[0] === 0x25 && b[1] === 0x50 && b[2] === 0x44 && b[3] === 0x46;
@@ -17,13 +17,14 @@ async function pdf(bytes, vez) {
   const doc = await pdfjs.getDocument({ data: bytes, isEvalSupported: false }).promise;
   if (vez !== atual) return;
   $p.innerHTML = "";
-  const larg = Math.min(document.documentElement.clientWidth - 20, 900);
+  const larg = Math.round(Math.min(document.documentElement.clientWidth - 24, 1400) * zoom);
+  try { parent.postMessage({ apto: "previaPaginas", n: doc.numPages }, SEEU); } catch (e) { /* janela: sem moldura */ }
   const n = Math.min(doc.numPages, MAX_PAG);
   for (let i = 1; i <= n; i++) {
     const pg = await doc.getPage(i);
     if (vez !== atual) return;
     const v0 = pg.getViewport({ scale: 1 });
-    const esc = larg / v0.width, dpr = Math.min(2, window.devicePixelRatio || 1);
+    const esc = larg / v0.width, dpr = Math.min(3, (window.devicePixelRatio || 1) * 1.5);   // nítido também com o zoom
     const vp = pg.getViewport({ scale: esc * dpr });
     const c = document.createElement("canvas");
     c.width = Math.floor(vp.width); c.height = Math.floor(vp.height);
@@ -78,6 +79,16 @@ async function mostrar(u, vez) {
     msg("Não foi possível mostrar a prévia", "Clique no link para baixar o arquivo.");
   }
 }
+// zoom: ajustar à largura (padrão), aumentar e diminuir; Ctrl + roda do mouse também
+function aplicarZoom(z) {
+  zoom = Math.max(0.5, Math.min(3, z));
+  document.getElementById("zv").textContent = Math.round(zoom * 100) + "%";
+  if (ultimo) mostrar(ultimo);
+}
+document.getElementById("zm").addEventListener("click", () => aplicarZoom(zoom - 0.25));
+document.getElementById("zp").addEventListener("click", () => aplicarZoom(zoom + 0.25));
+document.getElementById("za").addEventListener("click", () => aplicarZoom(1));
+window.addEventListener("wheel", (e) => { if (!e.ctrlKey) return; e.preventDefault(); aplicarZoom(zoom + (e.deltaY < 0 ? 0.1 : -0.1)); }, { passive: false });
 const doc = (location.hash.match(/doc=([\w]+)/) || [])[1];
 if (doc) {
   // janela do documento (2º monitor): a extensão busca o arquivo do SEEU e a página o mostra inteiro

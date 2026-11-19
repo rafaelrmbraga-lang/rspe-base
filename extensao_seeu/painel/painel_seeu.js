@@ -167,6 +167,17 @@
     .ri.x i{background:#B3261E;color:#fff}
     .ri.q i{background:#C99A06;color:#fff}
     .pop small{display:block;margin-top:6px;color:#5C636A;font-size:11.5px}
+    .seg{overflow:visible}
+    .seg .mw{display:flex}
+    .seg .mw .sg{border-right:1px solid #E3E6E8;height:100%}
+    .seg .mw:last-child .sg{border-right:0}
+    .seg>.sg.reg{border-radius:9px 0 0 9px}
+    .seg .mw:last-child .sg{border-radius:0 9px 9px 0}
+    .seg>.mw:first-child .sg{border-radius:9px 0 0 9px}
+    .pq{display:block;color:#454B50;margin-bottom:4px}
+    .pa{display:flex;gap:7px;align-items:flex-start;margin:4px 0;padding:6px 8px;background:#FBF1D2;border-radius:6px;color:#4D3B00}
+    .pa i{flex:none;width:16px;height:16px;border-radius:50%;background:#8A6A00;color:#fff;font:700 11px/16px system-ui;text-align:center;font-style:normal}
+    .pd{display:block;color:#5C636A;font-size:12px;margin-top:4px}
     .cp,.conf{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:0 9px;border-radius:8px;
       font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
     .cp{border:1px solid #C9CED2;background:#fff;color:#1D5A3B}
@@ -184,6 +195,7 @@
   function ligarChips(raizC) {
     raizC.addEventListener("click", async (e) => {
       const sg = e.target.closest("[data-chip]");
+      if (sg && sg.dataset.focar) { await abrir(true); paraPainel({ apto: "focar", id: sg.dataset.focar }); return; }   // marco com ponto a conferir: o cartão
       if (sg) {
         const aberto = sg.getAttribute("aria-expanded") === "true";
         raizC.querySelectorAll("[data-chip]").forEach((b) => b.setAttribute("aria-expanded", "false"));
@@ -299,13 +311,18 @@
       :host{all:initial}
       .moldura{position:fixed;top:0;right:0;height:100vh;width:${LARG}px;border:0;border-left:1px solid #8C9399;background:#F5F6F6;
         box-shadow:-6px 0 18px rgba(0,0,0,.08)}
-      .lingueta{position:fixed;right:0;top:38%;width:38px;min-height:44px;background:#1D5A3B;color:#fff;border:0;border-radius:8px 0 0 8px;padding:10px 0;
-        display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:-3px 2px 10px rgba(0,0,0,.18);cursor:pointer;
-        font:700 12.5px/1 "Source Sans 3","Segoe UI",system-ui,sans-serif}
-      .lingueta:hover{background:#153F2A}
+      .lingueta{position:fixed;right:0;top:34%;width:46px;background:#1D5A3B;color:#fff;border:0;border-radius:12px 0 0 12px;padding:10px 0 12px;
+        display:flex;flex-direction:column;align-items:center;gap:10px;box-shadow:-4px 4px 16px rgba(0,0,0,.22);cursor:pointer;
+        font:700 12px/1 "Source Sans 3","Segoe UI",system-ui,sans-serif;transition:transform .15s ease-out,background .15s ease-out}
+      .lingueta:hover{background:#153F2A;transform:translateX(-4px)}
       .lingueta:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
-      .selo{display:block;width:30px;height:30px;border-radius:50%;background:#fff}
-      .n{background:#F8F0D8;color:#765C00;border-radius:10px;font-size:11.5px;padding:2px 5px;min-width:16px;text-align:center}
+      @media (prefers-reduced-motion:reduce){.lingueta{transition:none}.lingueta:hover{transform:none}}
+      .selo{display:block;width:32px;height:32px;border-radius:50%;background:#fff;box-shadow:0 0 0 2px rgba(255,255,255,.35)}
+      .v{writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.06em;font-size:12px;font-weight:700;opacity:.95}
+      .n{display:flex;flex-direction:column;align-items:center;gap:2px;background:#F2D35B;color:#3D2E00;border-radius:999px;padding:5px 0 6px;width:30px;
+        font-size:13px;font-weight:800;font-variant-numeric:tabular-nums}
+      .n i{font-style:normal;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;border-radius:50%;background:#8A6A00;
+        color:#fff;font-size:11px}
 
       [hidden]{display:none!important}
     </style>
@@ -334,7 +351,11 @@
   }
   function pintarLingueta() {
     const a = contagem.amarelo || 0;
-    lingueta.innerHTML = `<img class="selo" src="${chrome.runtime.getURL("icones/128.png")}" alt="" width="30" height="30">` + (a ? `<span class="n" aria-hidden="true">!${a}</span>` : "");
+    // a lingueta: o selo, "Abrir análise" na vertical e, se houver, quantos pontos há para conferir
+    lingueta.innerHTML = `<img class="selo" src="${chrome.runtime.getURL("icones/128.png")}" alt="" width="32" height="32">` +
+      `<span class="v" aria-hidden="true">Abrir análise</span>` +
+      (a ? `<span class="n" aria-hidden="true"><i>!</i>${a}</span>` : "");
+    lingueta.title = "Abrir a análise do APTO (painel lateral)" + (a ? " · " + a + (a === 1 ? " ponto" : " pontos") + " para conferir" : "");
     lingueta.setAttribute("aria-label", "Abrir a análise do APTO" + (a ? ": " + a + (a === 1 ? " ponto" : " pontos") + " para conferir" : ""));
   }
   async function abrir(sim) {

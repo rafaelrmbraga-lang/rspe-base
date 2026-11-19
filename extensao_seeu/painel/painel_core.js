@@ -170,8 +170,11 @@
     const p = (res && res.painel) || {};
     return { processo: p.processo || "", nome: p.nome || "", regime: p.regime || (p.pena || {}).regime || "", especial: !!p.especial, conferir: (p.contagem || {}).amarelo || 0,
       icones: (p.icones || []).map((x) => ({ tipo: x.tipo, rotulo: x.rotulo, estado: x.estado, alvo: x.alvo, itens: x.itens || null })),
-      marcos: (p.marcos || []).map((m) => ({ id: m.id, rotulo: m.rotulo, data: m.data, quando: m.quando, destaque: m.destaque, alerta: m.alerta,
-        detalhe: [m.extra, ...(m.conta || [])].filter(Boolean) })) };
+      marcos: (p.marcos || []).map((m) => {
+        const al = (p.alertas || []).find((a) => a.id === m.id);   // o ponto a conferir do marco (ex.: vencida · indeferido em ...)
+        return { id: m.id, rotulo: m.rotulo, data: m.data, quando: m.quando, destaque: m.destaque, alerta: m.alerta,
+          aviso: al ? al.conferir || al.motivo || "" : "", detalhe: [m.extra, ...(m.conta || [])].filter(Boolean) };
+      }) };
   }
   function chips(d, fixa) {
     const reg = String(d.regime || "").replace(/\s*-\s*ATIVO$/i, "");
@@ -181,9 +184,16 @@
       const dest = m.destaque === "atingida" ? "vencida" : m.destaque;
       const est = dest ? `<span class="est ${esc(dest)}">${CICO[dest] || ""}<span class="vh">${dest === "proximo" ? "a menos de 60 dias" : "vencida"}</span></span>` : "";
       const nome = `${esc(m.rotulo)}: ${esc(m.data)}${m.quando ? ", " + esc(m.quando) : ""}${m.alerta ? ", com ponto a conferir" : ""}`;
-      return `<button type="button" class="sg${dest ? " " + esc(dest) : ""}" data-chip="${i}" aria-expanded="false" aria-label="${nome}">` +
+      // ao passar o mouse (ou com o foco): a data, quanto falta ou desde quando venceu, o ponto a conferir (indeferimento, falta...)
+      const pid = `mc-${fixa ? "f" : "l"}${i}`;
+      const pop = `<span class="pop" role="tooltip" id="${pid}"><b>${esc(m.rotulo)} · ${esc(m.data)}</b>` +
+        `${m.quando ? `<span class="pq">${esc(m.quando)}</span>` : ""}` +
+        `${m.aviso ? `<span class="pa"><i aria-hidden="true">!</i><span>${esc(m.aviso)}</span></span>` : ""}` +
+        `${(m.detalhe || []).length ? `<span class="pd">${m.detalhe.slice(0, 4).map(esc).join("<br>")}</span>` : ""}` +
+        `<small>${m.alerta ? "Clique para ver o cartão no painel." : "Clique para fixar o detalhe."}</small></span>`;
+      return `<span class="benw mw"><button type="button" class="sg${dest ? " " + esc(dest) : ""}" data-chip="${i}"${m.alerta ? ` data-focar="${esc(m.id)}"` : ""} aria-expanded="false" aria-label="${nome}" aria-describedby="${pid}">` +
         `<span class="rot">${esc(CROT[m.id] || m.rotulo)}${esc(sub)}${m.alerta ? '<b class="mk" aria-hidden="true">!</b>' : ""}</span>` +
-        `<span class="dt">${esc(m.data)}${est}</span></button>`;
+        `<span class="dt">${esc(m.data)}${est}</span></button>${pop}</span>`;
     }).join("");
     const det = (d.marcos || []).filter((m) => m.data && m.data !== "—").map((m, i) =>
       `<div class="det" data-det="${i}" hidden><b>${esc(m.rotulo)}</b> · ${esc(m.data)}${m.quando ? " · " + esc(m.quando) : ""}` +
@@ -227,17 +237,21 @@
     if (/^(RETIFICAD|CONCLUSOS)/.test(t)) return "cartorio";   // mesmo lançado pelo gabinete
     if (g.has("AUDIENCIA") || /AUDI[ÊE]NCIA/.test(t)) return "audiencia";
     if (g.has("JUIZ") || /^Magistrad|^Assessor/i.test(c)) return /DESPACHO|MERO EXPEDIENTE/.test(t) && !DECISAO.test(t.replace(/MERO EXPEDIENTE/, "")) ? "despacho" : "decisao";
+    if (/Depen|Seap|Agepen/i.test(c)) return "unidade";   // o que a unidade prisional movimenta (ciência, ofício, atestado): amarelo
+    if (/Apoio Especializado|Perit/i.test(c)) return "pericia";
     if (ROTINA.test(t)) return "cartorio";
     if (g.has("PROMOTOR") || /Minist[ée]rio P[úu]blico/i.test(c)) return "mp";
     if (g.has("DEFENSOR") || /^Defensor/i.test(c)) return "defensoria";
+    if (/Apoio Especializado|Perit/i.test(c)) return "pericia";
     if (/Depen|Seap|Agepen/i.test(c) || UNIDADE.test(t)) return "unidade";
-    if (g.has("ADVOGADO") || g.has("PROCURADOR") || /^Advogad/i.test(c)) return "advogado";
-    if (g.has("SERVIDOR") || /Analista|T[ée]cnico Judici|Estagi[áa]ri|Distribuidor|Escriv/i.test(c)) return "cartorio";
-    if (/^JUNTADA DE PETI[ÇC][ÃA]O/.test(t)) return "advogado";
+    // apoio especializado do juízo (perícia, equipe psicossocial): laudos e relatórios técnicos - não é advogado
+    if (/Apoio Especializado|Perit|Psic[óo]log|Assistente Social|Equipe T[ée]cnica|Multidisciplinar/i.test(c) || /^JUNTADA DE LAUDO/.test(t)) return "pericia";
+    if (g.has("ADVOGADO") || g.has("PROCURADOR") || /^Advogad|^Procurador/i.test(c)) return "advogado";
+    if (g.has("SERVIDOR") || /Analista|T[ée]cnico\(?a?\)? Judici|Estagi[áa]ri|Distribuidor|Escriv/i.test(c)) return "cartorio";
     return "outro";
   }
   const CAT_MOV = [["decisao", "Decisões"], ["despacho", "Despachos"], ["mp", "MP"], ["defensoria", "DPE"], ["advogado", "ADV"],
-    ["unidade", "Depen / unidade"], ["audiencia", "Audiências"], ["cartorio", "Cartório"], ["outro", "Outros"]];
+    ["unidade", "Depen / unidade"], ["pericia", "Perícia"], ["audiencia", "Audiências"], ["cartorio", "Cartório"], ["outro", "Outros"]];
 
   const api = { esc, html, resumo, fundamento, chips, dadosChips, classificarMov, CAT_MOV, ICO };
   if (typeof module === "object" && module.exports) module.exports = api;

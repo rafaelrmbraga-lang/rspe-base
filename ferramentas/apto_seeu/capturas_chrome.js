@@ -4,7 +4,9 @@ const { chromium } = require("playwright");
 const fs = require("fs"), path = require("path"), os = require("os");
 const EXT = path.resolve(process.argv[2]), OUT = path.resolve(process.argv[3]);
 const abrir = (vp) => chromium.launchPersistentContext(fs.mkdtempSync(path.join(os.tmpdir(), "apto-guia-")), { headless: true, channel: "chromium",
-  viewport: vp, deviceScaleFactor: 2, args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`] });
+  viewport: vp, deviceScaleFactor: 2, locale: "pt-BR", args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`, "--lang=pt-BR"],
+  // no Linux, o idioma da interface do Chrome vem das variáveis de ambiente: telas em português, como as de quem vai instalar
+  env: Object.assign({}, process.env, { LANGUAGE: "pt_BR", LANG: "pt_BR.UTF-8", LC_ALL: "pt_BR.UTF-8" }) });
 (async () => {
   fs.mkdirSync(OUT, { recursive: true });
   let ctx = await abrir({ width: 1280, height: 760 });

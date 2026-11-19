@@ -76,10 +76,16 @@ def preparar(cap, e2e):
     from PIL import Image, ImageDraw
     im = Image.open(os.path.join(cap, "ext_2.png")).convert("RGB")
     k = im.size[0] / 2560.0
-    topo = im.crop((0, 0, im.size[0], int(230 * k))).copy()
-    d = ImageDraw.Draw(topo)
-    for b in ((2250, 22, 2550, 90), (40, 128, 300, 210)):
-        d.rounded_rectangle(tuple(int(x * k) for x in b), radius=14, outline=(214, 40, 40), width=7)
+    # só as duas partes que importam, lado a lado e maiores: o botão (à esquerda da tela) e a chave (à direita)
+    esq = im.crop(tuple(int(x * k) for x in (0, 0, 820, 230))).copy()
+    dir_ = im.crop(tuple(int(x * k) for x in (2110, 0, 2560, 230))).copy()
+    for parte, caixa in ((esq, (36, 124, 450, 214)), (dir_, (30, 20, 446, 92))):
+        ImageDraw.Draw(parte).rounded_rectangle(tuple(int(x * k) for x in caixa), radius=14, outline=(214, 40, 40), width=7)
+    gap = int(40 * k)
+    topo = Image.new("RGB", (esq.size[0] + gap + dir_.size[0], esq.size[1]), (255, 255, 255))
+    topo.paste(esq, (0, 0))
+    topo.paste(dir_, (esq.size[0] + gap, 0))
+    ImageDraw.Draw(topo).line([(esq.size[0] + gap // 2, int(14 * k)), (esq.size[0] + gap // 2, esq.size[1] - int(14 * k))], fill=(200, 205, 210), width=3)
     topo.save(os.path.join(cap, "g_ext_topo.png"))
     im.crop(tuple(int(x * k) for x in (680, 440, 1495, 868))).save(os.path.join(cap, "g_ext_card.png"))
     for src, fr, dst in (("painel_S035.png", (0, 0, 1, 1), "g_visao.png"), ("painel_S141.png", (0, 0.07, 0.71, 0.32), "g_chips.png"),
@@ -131,8 +137,9 @@ def gerar(destino, cap, versao):
                      "Abra (ou recarregue) a página de um processo no SEEU."], numerada=True),
           Spacer(1, 6)]
     s += _figura(E, cap, "g_ext_topo.png", L, "Tela de extensões do Chrome: o Modo do desenvolvedor (à direita) e o botão Carregar sem compactação "
-                                             "(à esquerda). Em português, os nomes aparecem como no texto.")
-    s += _figura(E, cap, "g_ext_card.png", 92 * mm, "A extensão carregada. O botão de recarregar (seta circular) atualiza a extensão depois de trocar a pasta por uma versão nova.")
+                                             "(à esquerda), marcados em vermelho.")
+    s += _figura(E, cap, "g_ext_card.png", 92 * mm, "A extensão carregada. O botão de recarregar (seta circular) atualiza a extensão depois de trocar a pasta por uma versão "
+                                                "nova; Remover tira a extensão do Chrome.")
     s += [Paragraph("No <b>Microsoft Edge</b>, o caminho é o mesmo: <b>edge://extensions</b>, ligar o <i>Modo de desenvolvedor</i> e "
                     "<i>Carregar sem pacote</i>.", E["p"]),
           Paragraph("<b>Atualizar:</b> substitua o conteúdo da pasta apto_seeu pelo da versão nova e clique no botão de recarregar (seta circular) da extensão, na tela de extensões. "
@@ -147,7 +154,8 @@ def gerar(destino, cap, versao):
     s += _figura(E, cap, "g_visao.png", L, "Visão geral (SEEU fictício): os chips logo abaixo do número do processo e o painel à direita.")
     s += [Paragraph("Chips abaixo do número do processo", E["h2"]),
           _lista(E, ["<b>Regime e marcos</b>: data-base, progressão, livramento e término. Progressão ou livramento <b>vencido</b> fica em "
-                     "vermelho (!); a até 60 dias, em amarelo (relógio). Clique num chip para ver quanto falta e a fração.",
+                     "vermelho (!); a até 60 dias, em amarelo (relógio). Parar o mouse num marco mostra a data, quanto falta (ou desde quando "
+                     "venceu) e o ponto a conferir, como um indeferimento; o clique abre o cartão no painel.",
                      "<b>Benefícios</b>: saída temporária, progressão antecipada, indulto, comutação, extinção, prescrição, remição pendente "
                      "e restritiva de direitos. Verde: cabe; amarelo: a conferir. Clique para abrir o cartão no painel.",
                      "Em <b>saída temporária</b> e <b>progressão antecipada</b>, parar o mouse mostra o checklist dos requisitos "
@@ -166,7 +174,7 @@ def gerar(destino, cap, versao):
                      "<b>Confere</b>: o que tem certeza. <b>Não cabe</b> (recolhido): as hipóteses afastadas, com o motivo.",
                      "Indulto ou comutação <b>já decididos</b> no SEEU não aparecem como pendência.",
                      "<b>Ler de novo</b> (seta circular, no alto do painel) refaz a leitura; a seta para a direita (ou Esc) <b>recolhe</b> o painel numa lingueta na borda, com a contagem do "
-                     "que falta conferir. A escolha fica lembrada.",
+                     "que falta conferir; clique nela para reabrir. A escolha fica lembrada.",
                      "O resultado fica guardado por 10 minutos, só nesta sessão do navegador: trocar de aba no SEEU não refaz a leitura."])]
     tab = Table([[_img(os.path.join(cap, "g_painel.png"), 62 * mm) if os.path.isfile(os.path.join(cap, "g_painel.png")) else "",
                   _img(os.path.join(cap, "g_ficha.png"), 62 * mm) if os.path.isfile(os.path.join(cap, "g_ficha.png")) else ""]],
@@ -186,7 +194,8 @@ def gerar(destino, cap, versao):
           Paragraph("Na aba <b>Movimentações</b>, cada evento ganha cor e etiqueta pelo <b>conteúdo</b> (o realce do SEEU colore só por "
                     "quem movimentou):", E["p"])]
     cores = [("Decisão", "#1F4E8C", "#fff"), ("Despacho", "#D6E7F7", "#173F6B"), ("MP", "#B3261E", "#fff"), ("DPE", "#1D7A4A", "#fff"),
-             ("ADV", "#6B3FA0", "#fff"), ("Depen", "#F2D35B", "#4D3B00"), ("Cartório", "#F6CDAF", "#6B2C05"), ("Audiência", "#0E7490", "#fff")]
+             ("ADV", "#6B3FA0", "#fff"), ("Depen", "#F2D35B", "#4D3B00"), ("Perícia", "#7A5230", "#fff"), ("Cartório", "#F6CDAF", "#6B2C05"),
+             ("Audiência", "#0E7490", "#fff")]
     ct = Table([[Paragraph('<font color="%s"><b>%s</b></font>' % (tc, n), ParagraphStyle("c", fontName="SS-B", fontSize=9.5, leading=12,
                                                                                        alignment=1)) for n, _, tc in cores]],
                colWidths=[L / len(cores)] * len(cores))
@@ -200,7 +209,8 @@ def gerar(destino, cap, versao):
     s += _figura(E, cap, "g_movs.png", L, "Destaques das movimentações e a barra de filtros (SEEU fictício).")
     s += [Paragraph("Prévia dos documentos", E["h2"]),
           Paragraph("Pare o mouse sobre o link de um documento (por exemplo, <i>online.pdf</i> no detalhe da movimentação, aberto pelo "
-                    "\"+\"): a prévia abre ao lado, sem nova aba. <b>Expandir</b> amplia a prévia na página; Esc ou o X fecha. Clicar no "
+                    "\"+\"): a prévia abre ao lado, sem nova aba, com o número de páginas. Os botões <b>-</b> e <b>+</b> (ou Ctrl + roda do mouse) "
+                    "mudam o zoom; <b>Expandir</b> amplia a prévia na página; Esc ou o X fecha. Clicar no "
                     "link continua baixando o arquivo, como sempre.", E["p"])]
     s += _figura(E, cap, "g_previa.png", 140 * mm, "Prévia do documento ao passar o mouse no link.")
     s += [Paragraph("Documentos no 2º monitor", E["h2"]),

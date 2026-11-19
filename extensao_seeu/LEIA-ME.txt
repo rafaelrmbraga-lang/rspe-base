@@ -10,7 +10,7 @@ A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI s
 lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
 SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
 
-PAINEL DO APTO NA PÁGINA DO PROCESSO (1.20) - NÃO PRECISA DO APTO
+PAINEL DO APTO NA PÁGINA DO PROCESSO (1.21) - NÃO PRECISA DO APTO
  - Ao abrir um processo no SEEU, a análise aparece à direita, na ordem da ficha
    do assistido: pena, marcos, benefícios e demais pontos. Verde "Confere" =
    há certeza; amarelo "Conferir" = conferir (sem "agir já"). Cada item abre a
@@ -33,13 +33,17 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.20) - NÃO PRECISA DO APTO
    de progressão ou livramento vencido: vermelho com "!"; a até 60 dias: âmbar
    com relógio; os demais, brancos. A pena (total, cumprida, remanescente)
    fica na capa do SEEU: saiu do painel lateral.
+ - Chips dos marcos (1.21): parar o mouse num marco mostra a data, quanto
+   falta (ou desde quando venceu) e o ponto a conferir (ex.: indeferido em
+   ...); marco com ponto a conferir abre o cartão no painel ao clicar.
  - Barra fixa (1.18): clicar no nº ou no nome copia. Saída temporária e
    progressão antecipada: ao passar o mouse (ou com o foco do teclado), o
    checklist dos requisitos (✓ atendido, ✗ não atendido, ? a conferir).
  - Destaques das movimentações (1.20): na aba Movimentações, cada evento é
    classificado pelo conteúdo, e não só por quem movimentou: decisão (azul),
    despacho (azul claro), MP (vermelho), DPE (verde), ADV (roxo),
-   Depen/unidade prisional (amarelo), cartório (laranja), audiência. Esmaecer
+   Depen/unidade prisional (amarelo), perícia/apoio especializado (marrom),
+   cartório (laranja), audiência. A cor segue no detalhe aberto pelo "+". Esmaecer
    ou ocultar vale só para o que não tem arquivo vinculado. A barra acima da
    tabela filtra por categoria (com as contagens); a escolha é lembrada.
  - ANPP, transação penal e suspensão condicional do processo (1.18): pelo

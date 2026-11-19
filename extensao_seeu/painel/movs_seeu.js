@@ -21,14 +21,17 @@
     unidade: ["#C99A06", "#FFF8DC", "#F2D35B", "#4D3B00", "Depen"],
     cartorio: ["#D9661F", "#FDF1E8", "#F6CDAF", "#6B2C05", "Cartório"],
     audiencia: ["#0E7490", "#EAF6F9", "#0E7490", "#fff", "Audiência"],
+    pericia: ["#7A5230", "#F7F0E9", "#7A5230", "#fff", "Perícia"],
   };
+  // a linha e o seu detalhe (o "+" abre os documentos numa linha logo abaixo): a mesma cor
   const css = Object.entries(COR).map(([k, [bar, bg, tb, tc]]) =>
-    `tr[data-apto-mov="${k}"]>td:first-child{box-shadow:inset 4px 0 0 ${bar}}` +
-    (bg ? `tr[data-apto-mov="${k}"]>td{background-color:${bg}!important}` : "") +
+    `tr[data-apto-mov="${k}"]>td:first-child,tr[data-apto-det="${k}"]>td:first-child{box-shadow:inset 4px 0 0 ${bar}}` +
+    (bg ? `tr[data-apto-mov="${k}"]>td,tr[data-apto-det="${k}"]>td{background-color:${bg}!important}` : "") +
     `tr[data-apto-mov="${k}"] .apto-tag{background:${tb};color:${tc}}`).join("\n") + `
     .apto-tag{display:inline-block;margin:0 6px 2px 0;padding:1px 7px;border-radius:999px;font:700 10.5px/1.5 "Source Sans 3","Segoe UI",system-ui,sans-serif;
       letter-spacing:.02em;vertical-align:1px;white-space:nowrap}
     table.apto-movs.apto-esmaecer tr[data-apto-arq="0"]>td{opacity:.45}
+    tr[data-apto-det]>td .extendedinfo,tr[data-apto-det]>td table{background:transparent!important}
     table.apto-movs.apto-esmaecer tr[data-apto-arq="0"]:hover>td{opacity:1}
     table.apto-movs tr.apto-oculta,table.apto-movs tr.apto-oculta+tr[id^="rowmov"]{display:none!important}`;
 
@@ -48,6 +51,8 @@
       const cargo = (tds[5] && tds[5].querySelector("font b") || {}).textContent || "";
       const cat = C.classificarMov(grupos, titulo, cargo);
       tr.dataset.aptoMov = cat;
+      const det = tr.nextElementSibling;
+      if (det && /^rowmov/i.test(det.id || "")) det.dataset.aptoDet = cat;
       // arquivo vinculado: o "+" que abre os documentos (o SEEU marca SEMARQUIVO no id da linha quando não há)
       const temArq = !grupos.map((x) => x.toUpperCase()).includes("SEMARQUIVO") && !!tr.querySelector("img[onclick*='showDetail'], a[class^='linkArquivos'], a[href*='arquivo.do']");
       tr.dataset.aptoArq = temArq ? "1" : "0";
@@ -75,7 +80,8 @@
   function barra(tab, n) {
     const host = document.createElement("div");
     host.id = "apto-movs";
-    host.style.cssText = "all:initial;display:block;margin:8px 0";
+    // contain: a barra não alarga a célula da tabela do SEEU onde ela fica (as categorias quebram em linhas, não esticam a página)
+    host.style.cssText = "all:initial;display:block;margin:8px 0;width:100%;max-width:100%;box-sizing:border-box;contain:inline-size";
     const raiz = host.attachShadow({ mode: "open" });
     const total = Object.entries(n).filter(([k]) => k !== "_sem").reduce((a, [, b]) => a + b, 0);
     const chips = C.CAT_MOV.filter(([k]) => n[k]).map(([k, r]) => {

@@ -9,7 +9,8 @@
   window.__aptoPrevia = true;
   if (window.name === "apto-triagem-oculta") return;
   const ORIGEM = chrome.runtime.getURL("").replace(/\/$/, "");
-  const ESPERA_MS = 450, FECHA_MS = 350, LARG = 560, MAX_CACHE = 8;
+  const ESPERA_MS = 450, FECHA_MS = 350, MAX_CACHE = 8;
+  const largura = () => Math.max(420, Math.min(760, window.innerWidth - (painelAberto() ? 392 : 0) - 48));
   const cache = new Map();
   let host, raiz, quadro, moldura, titulo, expandir, grande = false, pronta = false, fila = null, linkAtual = null, tAbrir = 0, tFechar = 0, ligado = true;
 
@@ -24,7 +25,7 @@
     raiz = host.attachShadow({ mode: "open" });
     raiz.innerHTML = `<style>
       :host{all:initial}
-      .q{position:fixed;width:${LARG}px;height:min(72vh,760px);display:flex;flex-direction:column;background:#fff;border:1px solid #8C9399;border-radius:10px;
+      .q{position:fixed;width:720px;height:min(84vh,920px);display:flex;flex-direction:column;background:#fff;border:1px solid #8C9399;border-radius:10px;
         box-shadow:0 12px 32px rgba(0,0,0,.22);overflow:hidden;font:12.5px/1.3 "Source Sans 3","Segoe UI",system-ui,sans-serif;color:#1E2226;
         opacity:0;transform:translateY(4px);transition:opacity .14s ease-out,transform .14s ease-out}
       .q.on{opacity:1;transform:none}
@@ -32,6 +33,7 @@
       @media (prefers-reduced-motion:reduce){.q{transition:none}}
       .cab{display:flex;align-items:center;gap:8px;padding:6px 8px 6px 12px;background:#1D5A3B;color:#fff}
       .cab b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px}
+      .cab small{font-weight:600;opacity:.85;margin-left:6px}
       .bt{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;border-radius:6px;
         background:rgba(255,255,255,.14);color:#fff;font-weight:700;font-size:12px;cursor:pointer}
       .bt:hover{background:rgba(255,255,255,.26)}
@@ -41,7 +43,7 @@
       [hidden]{display:none!important}
     </style>
     <div class="q" role="dialog" aria-label="Prévia do documento" hidden>
-      <div class="cab"><b id="t"></b><button type="button" class="bt" id="b" aria-pressed="false">Expandir</button>
+      <div class="cab"><b><span id="t"></span><small id="n"></small></b><button type="button" class="bt" id="b" aria-pressed="false">Expandir</button>
         <button type="button" class="bt x" id="x" aria-label="Fechar a prévia (Esc)">✕</button></div>
       <iframe title="Prévia do documento"></iframe>
     </div>`;
@@ -59,6 +61,7 @@
   window.addEventListener("message", (ev) => {
     if (ev.origin !== ORIGEM || !moldura || ev.source !== moldura.contentWindow) return;
     if ((ev.data || {}).apto === "previaPronta") { pronta = true; if (fila) { enviar(fila); fila = null; } }
+    if ((ev.data || {}).apto === "previaPaginas" && raiz) raiz.getElementById("n").textContent = ev.data.n ? "· " + ev.data.n + (ev.data.n === 1 ? " página" : " páginas") : "";
   });
   function enviar(d) {
     if (!pronta) { fila = d; return; }
@@ -76,6 +79,8 @@
     if (moldura.contentWindow) enviar({ redimensionar: true });
   }
   function posicionar(a) {
+    const LARG = largura();
+    quadro.style.width = grande ? "auto" : LARG + "px";
     if (grande) {
       const dir = (painelAberto() ? 392 : 0) + 16;
       Object.assign(quadro.style, { left: "16px", top: "16px", right: dir + "px", bottom: "16px" });
@@ -114,6 +119,7 @@
     montar();
     linkAtual = a;
     titulo.textContent = (a.textContent || "").replace(/\s+/g, " ").trim() || "Documento";
+    raiz.getElementById("n").textContent = "";
     quadro.hidden = false;
     posicionar(a);
     requestAnimationFrame(() => quadro.classList.add("on"));
