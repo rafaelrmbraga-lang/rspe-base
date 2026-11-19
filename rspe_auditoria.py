@@ -1693,6 +1693,22 @@ def auditar(r, hoje=None):
                            "arquivamento decorre de extinção, de unificação em outra execução ou de erro do cartório." % (
                                rs.pl(len(_at_arq), "condenação", "condenações"), "" if len(_at_arq) == 1 else "s", rs.pena_extenso(r.get("pena_remanescente"))),
                            "LEP, arts. 66, II e III, a, e 111.", tipo="execucao-arquivada-com-pena"))
+    # fração com data de vigência impressa pelo SEEU ("40% - Art.112, V, da LEP até 24/03/2026") e a data já passou: a fração do
+    # cadastro deixou de valer - conferir qual vale desde então e se o cálculo foi refeito (o SEEU não troca sozinho)
+    for c in ativos:
+        for campo_f, qual in (("fracao_progressao", "progressão de regime"), ("fracao_livramento", "livramento condicional")):
+            txt_f = (c.get(campo_f) or "").strip()
+            mv = re.search(r"\bat[ée]\s+(\d{2}/\d{2}/\d{4})", txt_f, re.I)
+            fim = rs.to_date(mv.group(1)) if mv else None
+            if not fim or fim >= hoje:
+                continue
+            frac_txt = re.split(r"\s+-\s+|\s+at[ée]\s+", txt_f, maxsplit=1)[0].strip()
+            itens.append(_item("verificar", "%s: fração de %s (%s) vigente só até %s - a data já passou" % (_nome(c), qual, frac_txt, rs.fmt(fim)),
+                               "O SEEU cadastrou a fração de %s deste crime como \u201c%s\u201d: ela vale só até %s, data que já passou (há %s). "
+                               "Conferir qual fração vale desde então (nova redação do art. 112 da LEP ou mudança na situação do crime) e se o "
+                               "cálculo do SEEU foi refeito: o SEEU não troca a fração sozinho, e as datas de %s seguem a fração antiga até o "
+                               "recálculo." % (qual, txt_f, rs.fmt(fim), rs.pl((hoje - fim).days, "dia", "dias"), qual),
+                               "LEP, arts. 111 e 112; CP, arts. 2º e 83.", tipo="fracao-vigencia-vencida", ref=_nome(c)))
     # processo "(Indultada)" com comutação lançada depois: mantém a marca do SEEU (extinto por indulto), com a nota
     for c in crimes:
         if c.get("comutacao_posterior"):

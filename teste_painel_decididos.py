@@ -77,6 +77,15 @@ from fractions import Fraction  # noqa: E402
 assert rs.parse_fracao("20% - Art.112, III, da LEP até 24/03/2026") == Fraction(1, 5)
 assert rs.parse_fracao("40% - Art.112, V, da LEP até 24/03/2026") == Fraction(2, 5)
 assert rs.parse_fracao("Art. 112, § 3º, Lei 13.769/2018 (1/8)") == Fraction(1, 8) and rs.parse_fracao("1/6 - Comum") == Fraction(1, 6)
+# fração com data de vigência já vencida: ponto a conferir (a fração do cadastro deixou de valer); data futura: nada
+import copy  # noqa: E402
+import rspe_auditoria as rau  # noqa: E402
+from datetime import date  # noqa: E402
+rv_ = copy.deepcopy(c["rspe"])
+rv_["_crimes"][0]["fracao_progressao"] = "20% - Art.112, III, da LEP até 24/03/2026"
+venc = [i for i in rau.auditar(rv_, date(2026, 11, 19))["aud_itens"] if i.get("tipo") == "fracao-vigencia-vencida"]
+assert len(venc) == 1 and "(20%) vigente só até 24/03/2026" in venc[0]["titulo"] and "há 240 dias" in venc[0]["detalhe"], venc
+assert not [i for i in rau.auditar(rv_, date(2026, 3, 1))["aud_itens"] if i.get("tipo") == "fracao-vigencia-vencida"]
 if len(sys.argv) > 1:
     json.dump(out, open(sys.argv[1], 'w'), ensure_ascii=False)
-print('ok: painel - decidido no SEEU não alerta, não alcançado afastado, aviso de cadastro recolhido, recálculo da progressão num cartão só, ANPP sem alerta de condenação, indulto de decreto já comutado, hipótese mais provável, medidas vigentes, fração com data de vigência')
+print('ok: painel - decidido no SEEU não alerta, não alcançado afastado, aviso de cadastro recolhido, recálculo da progressão num cartão só, ANPP sem alerta de condenação, indulto de decreto já comutado, hipótese mais provável, medidas vigentes, fração com data de vigência, aviso da vigência vencida')

@@ -1,4 +1,7 @@
-APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.32.1
+APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.32.2
+  Auditoria (7.32.2): fração do crime com data de vigência impressa pelo SEEU
+  ("... até 24/03/2026") e a data já passou: ponto a conferir - qual fração vale
+  desde então e se o cálculo do SEEU foi refeito.
   Correção (7.32.1): a fração de progressão com a data de vigência impressa
   pelo SEEU ("20% - Art.112, III, da LEP até 24/03/2026") era lida como 24/3
   (800%); agora a data e o número de lei ("Lei 13.964/2019") não viram fração.
