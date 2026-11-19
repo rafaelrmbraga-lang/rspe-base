@@ -192,10 +192,11 @@ def gerar(destino, cap, versao):
 
     s += [PageBreak(), Paragraph("4. Movimentações", E["h1"]),
           Paragraph("Na aba <b>Movimentações</b>, cada evento ganha cor e etiqueta pelo <b>conteúdo</b> (o realce do SEEU colore só por "
-                    "quem movimentou):", E["p"])]
-    cores = [("Decisão", "#1F4E8C", "#fff"), ("Despacho", "#D6E7F7", "#173F6B"), ("MP", "#B0103A", "#fff"), ("DPE", "#1D7A4A", "#fff"),
-             ("ADV", "#6B3FA0", "#fff"), ("Depen", "#F2D35B", "#4D3B00"), ("Perícia", "#7A5230", "#fff"), ("Cartório", "#FFD7A3", "#5C3200"),
-             ("Audiência", "#0E7490", "#fff")]
+                    "quem movimentou). Fundo colorido só no que se procura de relance - <b>decisão</b> (azul), <b>MP</b> (vermelho) e "
+                    "<b>DPE</b> (verde); as demais categorias têm a faixa lateral e a etiqueta, e o cartório fica em cinza discreto:", E["p"])]
+    cores = [("Decisão", "#1F4E8C", "#fff"), ("Despacho", "#E3ECF7", "#1F4E8C"), ("MP", "#C62828", "#fff"), ("DPE", "#1B7F4B", "#fff"),
+             ("ADV", "#EEE7F7", "#4B2A78"), ("Depen", "#FBF0CF", "#5C4300"), ("Perícia", "#EFE7E3", "#4E342E"), ("Cartório", "#EEF0F2", "#6B7278"),
+             ("Audiência", "#DDF1F6", "#0B5466")]
     ct = Table([[Paragraph('<font color="%s"><b>%s</b></font>' % (tc, n), ParagraphStyle("c", fontName="SS-B", fontSize=9.5, leading=12,
                                                                                        alignment=1)) for n, _, tc in cores]],
                colWidths=[L / len(cores)] * len(cores))

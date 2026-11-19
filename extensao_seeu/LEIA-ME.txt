@@ -40,10 +40,11 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.21) - NÃO PRECISA DO APTO
    progressão antecipada: ao passar o mouse (ou com o foco do teclado), o
    checklist dos requisitos (✓ atendido, ✗ não atendido, ? a conferir).
  - Destaques das movimentações (1.20): na aba Movimentações, cada evento é
-   classificado pelo conteúdo, e não só por quem movimentou: decisão (azul),
-   despacho (azul claro), MP (vermelho), DPE (verde), ADV (roxo),
-   Depen/unidade prisional (amarelo), perícia/apoio especializado (marrom),
-   cartório (laranja), audiência. A cor segue no detalhe aberto pelo "+". Esmaecer
+   classificado pelo conteúdo, e não só por quem movimentou. Fundo colorido só
+   no que se procura de relance: decisão (azul), MP (vermelho) e DPE (verde);
+   despacho (azul claro), ADV (roxo), Depen (amarelo), perícia (marrom) e
+   audiência têm a faixa lateral e a etiqueta; o cartório fica em cinza
+   discreto. A cor segue no detalhe aberto pelo "+". Esmaecer
    ou ocultar vale só para o que não tem arquivo vinculado. A barra acima da
    tabela filtra por categoria (com as contagens); a escolha é lembrada.
  - ANPP, transação penal e suspensão condicional do processo (1.18): pelo

@@ -12,17 +12,20 @@
   const C = self.APTO_PAINEL_CORE;
   if (!C || !C.classificarMov) return;
 
+  // esquema "só o essencial com cor": fundo só no que se procura de relance (decisão, MP, DPE); despacho, advogado, Depen, perícia
+  // e audiência com a faixa e a etiqueta; o cartório (a maior parte das movimentações) em cinza discreto, para o resto saltar aos olhos
   const COR = {   // barra à esquerda, fundo da linha, etiqueta (fundo, texto), nome
-    decisao: ["#1F4E8C", "#E8F0FB", "#1F4E8C", "#fff", "Decisão"],
-    despacho: ["#5B9BD5", "#F1F7FD", "#D6E7F7", "#173F6B", "Despacho"],
-    mp: ["#B0103A", "#FCE8EE", "#B0103A", "#fff", "MP"],                 // vermelho carmim (longe do laranja do cartório)
-    defensoria: ["#1D7A4A", "#EAF6EF", "#1D7A4A", "#fff", "DPE"],
-    advogado: ["#6B3FA0", "#F4EFFB", "#6B3FA0", "#fff", "ADV"],
-    unidade: ["#C99A06", "#FFF8DC", "#F2D35B", "#4D3B00", "Depen"],
-    cartorio: ["#E67E00", "#FFF4E3", "#FFD7A3", "#5C3200", "Cartório"],    // laranja âmbar
-    audiencia: ["#0E7490", "#EAF6F9", "#0E7490", "#fff", "Audiência"],
-    pericia: ["#7A5230", "#F7F0E9", "#7A5230", "#fff", "Perícia"],
+    decisao: ["#1F4E8C", "#E6EEFA", "#1F4E8C", "#fff", "Decisão"],
+    despacho: ["#7FA7D9", "", "#E3ECF7", "#1F4E8C", "Despacho"],
+    mp: ["#C62828", "#FDECEC", "#C62828", "#fff", "MP"],
+    defensoria: ["#1B7F4B", "#E8F5EE", "#1B7F4B", "#fff", "DPE"],
+    advogado: ["#6A3FA0", "", "#EEE7F7", "#4B2A78", "ADV"],
+    unidade: ["#B8860B", "", "#FBF0CF", "#5C4300", "Depen"],
+    pericia: ["#6D4C41", "", "#EFE7E3", "#4E342E", "Perícia"],
+    audiencia: ["#0E7490", "", "#DDF1F6", "#0B5466", "Audiência"],
+    cartorio: ["#C9CED2", "", "#EEF0F2", "#6B7278", "Cartório"],
   };
+
   // a linha e o seu detalhe (o "+" abre os documentos numa linha logo abaixo): a mesma cor
   const css = Object.entries(COR).map(([k, [bar, bg, tb, tc]]) =>
     `tr[data-apto-mov="${k}"]>td:first-child,tr[data-apto-det="${k}"]>td:first-child{box-shadow:inset 4px 0 0 ${bar}}` +

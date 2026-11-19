@@ -145,8 +145,8 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     let L = await cat();
     ok(L[1][0] === "decisao" && L[1][3] === "Decisão" && L[3][0] === "mp" && L[5][0] === "unidade" && L[6][0] === "defensoria" && L[8][0] === "despacho" && L[9][0] === "audiencia",
       id + ": movimentações classificadas pelo conteúdo (" + L.map((x) => x[0]).join(",") + ")");
-    ok(L[0][0] === "cartorio" && L[0][3] === "Cartório" && /230, 126, 0/.test(L[0][5]), id + ": cartório em laranja, com etiqueta (" + L[0][5] + ")");
-    ok(L[3][0] === "mp" && /176, 16, 58/.test(L[3][5]) && L[6][0] === "defensoria" && L[6][3] === "DPE" && /29, 122, 74/.test(L[6][5]), id + ": MP em vermelho, DPE em verde");
+    ok(L[0][0] === "cartorio" && L[0][3] === "Cartório" && /201, 206, 210/.test(L[0][5]), id + ": cartório em cinza discreto, com etiqueta (" + L[0][5] + ")");
+    ok(L[3][0] === "mp" && /198, 40, 40/.test(L[3][5]) && L[6][0] === "defensoria" && L[6][3] === "DPE" && /27, 127, 75/.test(L[6][5]), id + ": MP em vermelho, DPE em verde");
     ok(L.every((x) => (x[4] === "0") === (x[2] === "0.45")), id + ": esmaecido só o que não tem arquivo vinculado (" + L.map((x) => x[4] + ":" + x[2]).join(",") + ")");
     await pg.screenshot({ path: path.join(SAIDA, "movimentacoes.png"), fullPage: true });
     // prévia do documento ao passar o mouse no link (sem nova aba): o quadro abre ao lado, com a 1ª página desenhada
