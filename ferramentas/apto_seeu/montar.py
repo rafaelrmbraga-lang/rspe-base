@@ -14,7 +14,7 @@ import zipfile
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 EXT = os.path.join(RAIZ, "extensao_seeu")
 FONTE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "fonte")
-VERSAO = "1.1.8"
+VERSAO = "1.1.9"
 
 PAINEL = ["painel_seeu.js", "painel_core.js", "movs_seeu.js", "previa_seeu.js", "painel.html", "painel.css", "painel.js", "painel_resumo.js",
           "painel_bg.js", "docs_bg.js", "motor.html", "motor.js", "motor_off.js", "pdf_chars.mjs", "previa.html", "previa.js",

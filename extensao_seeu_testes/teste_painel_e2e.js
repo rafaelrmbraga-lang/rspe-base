@@ -81,7 +81,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
       " (" + meus.map((p) => p.metodo + " " + p.url.slice(0, 60)).join(" | ") + ")");
     if (c.prd) ok(/Prestação pecuniária: faltam R\$ [\d.,]+ · R\$ [\d.,]+ em atraso/.test(await f.textContent("#corpo")) && /PSC: faltam [\d,]+ h · [\d,]+ h em atraso/.test(await f.textContent("#corpo")),
       id + ": cumprimento da restritiva no painel (o que falta e o que já venceu, pecuniária e PSC)");
-    ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "392px", id + ": a página reserva a largura do painel");
+    ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "432px", id + ": a página reserva a largura do painel");
     // chips logo abaixo de "Execução nº" (marcos do APTO, na página); ao rolar, a barra fixa com o nº e o nome
     await pg.waitForSelector("#apto-chips .sg", { timeout: 15000 });
     ok(await pg.evaluate(() => document.getElementById("barraTituloStatusProcessual").nextElementSibling.id === "apto-chips"), id + ": chips logo abaixo do nº do processo");
@@ -117,7 +117,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
       await pg.waitForSelector("#apto-barra .barra.on", { timeout: 5000 });
       await pg.waitForTimeout(400);   // fim da entrada da barra
       const fx = await pg.locator("#apto-barra .barra").boundingBox();
-      ok(fx && fx.y === 0 && Math.round(1366 - (fx.x + fx.width)) === 392, id + ": barra fixa no alto, sem cobrir o painel (" + JSON.stringify(fx) + ")");
+      ok(fx && fx.y === 0 && Math.round(1366 - (fx.x + fx.width)) === 432, id + ": barra fixa no alto, sem cobrir o painel (" + JSON.stringify(fx) + ")");
       await pg.screenshot({ path: path.join(SAIDA, "chips_barra_fixa.png") });
       for (const [q, esperado] of [["processo", c.processo], ["nome", c.nome]]) {
         await pg.locator(`#apto-barra [data-copiar="${q}"]`).click();
@@ -159,6 +159,10 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     ok(fundos[3] === "rgb(248, 211, 211)" && fundos[6] === "rgb(205, 235, 217)" && fundos[1] === "rgb(211, 226, 248)", id + ": MP, DPE e decisão com as cores do esquema (" + [fundos[3], fundos[6], fundos[1]].join(" | ") + ")");
     ok(fundos.every((f) => !/168, 240, 216/.test(f)), id + ": o realce nativo do SEEU não aparece por baixo (" + fundos.join(" | ") + ")");
     await pg.screenshot({ path: path.join(SAIDA, "movimentacoes_realce.png"), fullPage: true });
+    // detalhe (o "+"): a célula ocupa a linha toda - sem o quadrado cinza sob o "Movimentado por"
+    const spans = await pg.evaluate(() => [...document.querySelectorAll("table.resultTable tbody > tr[id^='rowmov']")].map((d) => {
+      const tr = d.previousElementSibling; return [d.firstElementChild.colSpan, [...tr.children].reduce((a, td) => a + td.colSpan, 0)]; }));
+    ok(spans.length && spans.every(([a, b]) => a === b), id + ": o detalhe ocupa todas as colunas (" + JSON.stringify(spans.slice(0, 3)) + ")");
     ok(L.every((x) => (x[4] === "0") === (x[2] === "0.55")), id + ": esmaecido só o que não tem arquivo vinculado (" + L.map((x) => x[4] + ":" + x[2]).join(",") + ")");
     await pg.screenshot({ path: path.join(SAIDA, "movimentacoes.png"), fullPage: true });
     // prévia do documento ao passar o mouse no link (sem nova aba): o quadro abre ao lado, com a 1ª página desenhada
@@ -170,13 +174,13 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     ok(await pv.locator("canvas").count() >= 1, id + ": prévia do documento desenhada");
     ok(ctx.pages().length === nAbas, id + ": a prévia não abre aba");
     const caixa = await pg.locator("#apto-previa .q").boundingBox();
-    ok(caixa && caixa.x + caixa.width <= 1366 - 392, id + ": a prévia não cobre o painel (" + JSON.stringify(caixa) + ")");
+    ok(caixa && caixa.x + caixa.width <= 1366 - 432, id + ": a prévia não cobre o painel (" + JSON.stringify(caixa) + ")");
     await pg.screenshot({ path: path.join(SAIDA, "previa_documento.png") });
     await pg.locator("#apto-previa #b").click();   // Expandir: ocupa a página sem cobrir o painel e não fecha ao tirar o mouse
     await pg.mouse.move(5, 5);
     await pg.waitForTimeout(600);
     const gr = await pg.locator("#apto-previa .q").boundingBox();
-    ok(gr && gr.width > 800 && gr.x + gr.width <= 1366 - 392 && await pg.locator("#apto-previa .q").isVisible(), id + ": expandir amplia a prévia (" + JSON.stringify(gr) + ")");
+    ok(gr && gr.width > 800 && gr.x + gr.width <= 1366 - 432 && await pg.locator("#apto-previa .q").isVisible(), id + ": expandir amplia a prévia (" + JSON.stringify(gr) + ")");
     await pg.screenshot({ path: path.join(SAIDA, "previa_expandida.png") });
     await pg.keyboard.press("Escape");
     ok(await pg.locator("#apto-previa .q").isHidden(), id + ": Esc fecha a prévia");

@@ -10,7 +10,7 @@
   if (window.name === "apto-triagem-oculta") return;
   const ORIGEM = chrome.runtime.getURL("").replace(/\/$/, "");
   const ESPERA_MS = 450, FECHA_MS = 350, MAX_CACHE = 8;
-  const largura = () => Math.max(420, Math.min(760, window.innerWidth - (painelAberto() ? 392 : 0) - 48));
+  const largura = () => Math.max(420, Math.min(760, window.innerWidth - (painelAberto() ? 432 : 0) - 48));
   const cache = new Map();
   let host, raiz, quadro, moldura, titulo, expandir, grande = false, pronta = false, fila = null, linkAtual = null, tAbrir = 0, tFechar = 0, ligado = true;
 
@@ -82,13 +82,13 @@
     const LARG = largura();
     quadro.style.width = grande ? "auto" : LARG + "px";
     if (grande) {
-      const dir = (painelAberto() ? 392 : 0) + 16;
+      const dir = (painelAberto() ? 432 : 0) + 16;
       Object.assign(quadro.style, { left: "16px", top: "16px", right: dir + "px", bottom: "16px" });
       return;
     }
     Object.assign(quadro.style, { right: "", bottom: "" });
     const r = a.getBoundingClientRect();
-    const limD = window.innerWidth - (painelAberto() ? 392 : 0) - 12;
+    const limD = window.innerWidth - (painelAberto() ? 432 : 0) - 12;
     const alt = quadro.offsetHeight || Math.min(window.innerHeight * 0.72, 760);
     let x = r.right + 12;
     if (x + LARG > limD) x = r.left - LARG - 12;          // sem espaço à direita: à esquerda do link

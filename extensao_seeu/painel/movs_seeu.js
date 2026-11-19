@@ -73,7 +73,13 @@
       const cat = C.classificarMov(grupos, titulo, cargo);
       tr.dataset.aptoMov = cat;
       const det = tr.nextElementSibling;
-      if (det && /^rowmov/i.test(det.id || "")) det.dataset.aptoDet = cat;
+      if (det && /^rowmov/i.test(det.id || "")) {
+        det.dataset.aptoDet = cat;
+        // o SEEU abre o detalhe numa célula de 5 colunas numa tabela de 6: a última ficava sem célula (o quadrado cinza sob o
+        // "Movimentado por"); a célula passa a ocupar a linha toda - só o alcance, o conteúdo é o mesmo
+        const cols = [...tds].reduce((a, td) => a + (td.colSpan || 1), 0), dt = det.firstElementChild;
+        if (dt && det.children.length === 1 && dt.colSpan < cols) dt.colSpan = cols;
+      }
       // arquivo vinculado: o "+" que abre os documentos (o SEEU marca SEMARQUIVO no id da linha quando não há)
       const temArq = !grupos.map((x) => x.toUpperCase()).includes("SEMARQUIVO") && !!tr.querySelector("img[onclick*='showDetail'], a[class^='linkArquivos'], a[href*='arquivo.do']");
       tr.dataset.aptoArq = temArq ? "1" : "0";

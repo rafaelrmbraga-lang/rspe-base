@@ -9,7 +9,10 @@
  --ok:#1D6B37;--ok-bg:#E6F1E9;--ok-mk:#2B8048;--med:#765C00;--med-bg:#F8F0D8;--med-mk:#A07C00;
  --foco:#F2B705;--r:6px}
 *{box-sizing:border-box}
-html,body{margin:0;height:100%;background:var(--bg);color:var(--tx);font:13.5px/1.45 "Source Sans 3","Segoe UI",system-ui,sans-serif}
+/* letra 10% maior em tudo (o painel tem 432px, em vez de 392: cabe a mesma diagramação); a altura compensa o zoom, para a barra
+   de baixo continuar no pé da tela */
+html{zoom:1.1}
+html,body{margin:0;height:calc(100vh / 1.1);background:var(--bg);color:var(--tx);font:13.5px/1.45 "Source Sans 3","Segoe UI",system-ui,sans-serif}
 .painel{display:flex;flex-direction:column;height:100%}
 button{font:inherit;cursor:pointer}
 button:focus-visible,summary:focus-visible{outline:3px solid var(--foco);outline-offset:2px}

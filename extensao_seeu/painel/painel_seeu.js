@@ -12,7 +12,7 @@
   if (window.name === "apto-triagem-oculta") return;            // moldura invisível da Triagem da Mesa
   if (!/visualizacaoProcesso\.do/i.test(location.pathname)) return;
   const A = self.APTO;
-  const LARG = 392;
+  const LARG = 432;   // 392 com a letra do painel 10% maior (zoom em painel.css): a mesma diagramação
   const ORIGEM = chrome.runtime.getURL("").replace(/\/$/, "");
   // ---------- número do processo
   function processoDaPagina() {
