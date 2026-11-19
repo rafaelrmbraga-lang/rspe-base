@@ -36,9 +36,16 @@ ok(h.includes('data-acao="ficha-carregar"') && h.includes("Carregar a ficha (PDF
 const comFicha = (velha, carregada) => C.html({ estado: "ok", fichaCarregada: carregada ? { resumo: {}, arquivo: "f.pdf" } : null,
   painel: Object.assign({}, res.painel, { ficha: true, ficha_info: { nome: "Fulano", impressa: "10/10/2026", dias: velha ? 120 : 2, velha } }) });
 const hf = comFicha(false, true);
-ok(hf.includes('class="ficha verde"') && hf.includes("impressa em 10/10/2026 (há 2 dias)") && hf.includes("carregada no painel") && hf.includes('data-acao="ficha-retirar"'), "ficha carregada: data, trocar e retirar");
+ok(hf.includes('class="ficha curta verde"') && hf.includes("Ficha SIAPEN · 10/10/2026 (há 2 dias)") && hf.includes("carregada no painel") && hf.includes('data-acao="ficha-retirar"'), "ficha carregada: data, trocar e retirar");
 ok(!comFicha(false, false).includes("ficha-retirar") && comFicha(false, false).includes("aberta no SIAPEN"), "ficha do SIAPEN: sem retirar, origem dita");
-ok(comFicha(true, true).includes('class="ficha amarelo"'), "ficha velha: amarelo");
+ok(comFicha(true, true).includes('class="ficha curta amarelo"'), "ficha velha: amarelo");
+// cada alerta copia o seu fundamento; aviso de cadastro sem efeito fica recolhido
+const hc = C.html(res);
+ok((hc.match(/data-acao="copiar-fund"/g) || []).length === (res.painel.alertas || []).length, "um Copiar fundamento por alerta");
+const a0 = res.painel.alertas[0];
+ok(C.fundamento(a0).startsWith(a0.titulo) && (!a0.fundamento || C.fundamento(a0).includes("Fundamento: " + a0.fundamento)), "texto do fundamento: título, conta e base legal");
+const hd = C.html({ estado: "ok", painel: Object.assign({}, res.painel, { observacoes: [{ titulo: "Pena na ficha (x) difere da pena total do RSPE (y)", conta: [] }] }) });
+ok(hd.includes("sem efeito para o assistido: 1"), "observações de cadastro recolhidas");
 const t = C.resumo(res);
 ok(t.includes("MARCOS") && t.includes("[próximo]") && t.includes("PARA CONFERIR") && t.includes("Indulto 2025") && t.includes("NÃO CABE"), "resumo em texto");
 if (falhas.length) { console.log("FALHOU:\n  " + falhas.join("\n  ")); process.exit(1); }

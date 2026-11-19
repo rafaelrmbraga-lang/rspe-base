@@ -86,7 +86,7 @@
         font:700 12.5px/1 "Source Sans 3","Segoe UI",system-ui,sans-serif}
       .lingueta:hover{background:#153F2A}
       .lingueta:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
-      .v{writing-mode:vertical-rl;transform:rotate(180deg);letter-spacing:.12em}
+      .selo{display:block;width:30px;height:30px;border-radius:50%;background:#fff}
       .n{background:#F8F0D8;color:#765C00;border-radius:10px;font-size:11.5px;padding:2px 5px;min-width:16px;text-align:center}
       [hidden]{display:none!important}
     </style>
@@ -100,7 +100,7 @@
   }
   function pintarLingueta() {
     const a = contagem.amarelo || 0;
-    lingueta.innerHTML = `<span class="v">APTO</span>` + (a ? `<span class="n" aria-hidden="true">!${a}</span>` : "");
+    lingueta.innerHTML = `<img class="selo" src="${chrome.runtime.getURL("icones/128.png")}" alt="" width="30" height="30">` + (a ? `<span class="n" aria-hidden="true">!${a}</span>` : "");
     lingueta.setAttribute("aria-label", "Abrir a análise do APTO" + (a ? ": " + a + (a === 1 ? " ponto" : " pontos") + " para conferir" : ""));
   }
   async function abrir(sim) {

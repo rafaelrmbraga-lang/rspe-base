@@ -21,9 +21,11 @@
     const carregada = res && res.fichaCarregada;
     let fic;
     if (p.ficha && fi) {
-      const quando = fi.impressa ? `impressa em ${esc(fi.impressa)}${fi.dias == null ? "" : fi.dias <= 0 ? " (hoje)" : " (há " + fi.dias + (fi.dias === 1 ? " dia" : " dias") + ")"}` : "sem data de impressão";
-      fic = `<div class="ficha ${fi.velha ? "amarelo" : "verde"}">${fi.velha ? ICO.amarelo : ICO.verde}<span>Ficha do SIAPEN ${quando}` +
-        `<small>${carregada ? "carregada no painel" : "aberta no SIAPEN nesta sessão"}</small></span>` +
+      // uma linha só: a ficha lida, a data e as ações (a origem fica no título, para quem passar o mouse ou o leitor de tela)
+      const quando = fi.impressa ? esc(fi.impressa) + (fi.dias == null ? "" : fi.dias <= 0 ? " (hoje)" : " (há " + fi.dias + (fi.dias === 1 ? " dia" : " dias") + ")") : "sem data";
+      const origem = carregada ? "carregada no painel" : "aberta no SIAPEN nesta sessão";
+      fic = `<div class="ficha curta ${fi.velha ? "amarelo" : "verde"}" title="Ficha ${origem}">${fi.velha ? ICO.amarelo : ICO.verde}` +
+        `<span class="ft">Ficha SIAPEN · ${quando}<span class="vh">, ${origem}</span></span>` +
         `<span class="ficha-acoes"><button type="button" class="lnk" data-acao="ficha-carregar">Trocar</button>` +
         (carregada ? `<button type="button" class="lnk" data-acao="ficha-retirar">Retirar</button>` : "") + `</span></div>`;
     } else {
@@ -61,14 +63,21 @@
     }).join("") + `</ul>`;
   }
 
-  // alertas: o destaque do painel, um cartão por ponto a conferir
-  function alerta(it) {
+  // alertas: o destaque do painel, um cartão por ponto a conferir; cada um copia o seu fundamento (título, conta e base legal)
+  function alerta(it, i) {
     const temConta = (it.conta || []).length || it.fundamento;
     return `<li class="al"><div class="l1"><span class="ic">${ICO.amarelo}</span><span class="t">${esc(it.titulo)}</span>${it.valor ? `<span class="v">${esc(it.valor)}</span>` : ""}</div>` +
       `${it.motivo ? `<div class="m">${esc(it.motivo)}</div>` : ""}` +
       `${it.conferir ? `<div class="conf"><b>Conferir:</b> ${esc(it.conferir)}</div>` : ""}` +
-      (temConta ? `<details><summary>Conta e fundamento</summary>${(it.conta || []).length ? `<div class="conta">${it.conta.map(esc).join("<br>")}</div>` : ""}` +
-        `${it.fundamento ? `<div class="fund">${esc(it.fundamento)}</div>` : ""}</details>` : "") + `</li>`;
+      `<div class="al-pe">` + (temConta ? `<details><summary>Conta e fundamento</summary>${(it.conta || []).length ? `<div class="conta">${it.conta.map(esc).join("<br>")}</div>` : ""}` +
+        `${it.fundamento ? `<div class="fund">${esc(it.fundamento)}</div>` : ""}</details>` : "") +
+      `<button type="button" class="lnk copiar-f" data-acao="copiar-fund" data-i="${i}" aria-label="Copiar o fundamento: ${esc(it.titulo)}">Copiar fundamento</button></div></li>`;
+  }
+
+  // texto do fundamento de um alerta, para colar na peça ou na anotação
+  function fundamento(it) {
+    return [it.titulo + (it.valor ? ": " + it.valor : ""), it.motivo, ...(it.conta || []), it.fundamento ? "Fundamento: " + it.fundamento : ""]
+      .filter(Boolean).join("\n");
   }
 
   // diagnóstico da leitura (só a estrutura: onde o painel roda, se achou o link do relatório, a resposta do SEEU; nenhum dado
@@ -86,7 +95,7 @@
     let h = topo(p, res) + `<section class="pena" aria-label="Pena e marcos">${pena(p)}${marcos(p)}</section>`;
     const A = p.alertas || [];
     h += `<section aria-labelledby="s-al"><h2 id="s-al" class="h-al">Para conferir${A.length ? ` <span class="cnt">${A.length}</span>` : ""}</h2>` +
-      (A.length ? `<ul class="alertas">${A.map(alerta).join("")}</ul>` : `<p class="vazio">${ICO.verde} Nada para conferir.</p>`) + `</section>`;
+      (A.length ? `<ul class="alertas">${A.map((a, i) => alerta(a, i)).join("")}</ul>` : `<p class="vazio">${ICO.verde} Nada para conferir.</p>`) + `</section>`;
     if ((p.confere || []).length) {
       h += `<section aria-labelledby="s-ok"><h2 id="s-ok">Confere</h2><ul class="confere">` +
         p.confere.map((it) => `<li><span class="ic">${ICO.verde}</span><span class="t">${esc(it.titulo)}</span>${it.valor ? `<span class="v">${esc(it.valor)}</span>` : ""}</li>`).join("") + `</ul></section>`;
@@ -94,6 +103,10 @@
     if ((p.crimes || []).length) {
       h += `<section aria-labelledby="s-crimes"><h2 id="s-crimes">Crimes em execução</h2><ul class="crimes">` +
         p.crimes.map((c) => `<li><b>${esc(c.texto)}</b>${c.pena ? ` · ${esc(c.pena)}` : ""}${c.hediondo && /verificar/.test(c.hediondo) ? ` <span class="selo-st amarelo">${ICO.amarelo}hediondo a conferir</span>` : ""}</li>`).join("") + `</ul></section>`;
+    }
+    if ((p.observacoes || []).length) {
+      h += `<details class="naocabe"><summary>Observações de cadastro, sem efeito para o assistido: ${p.observacoes.length}</summary><ul>` +
+        p.observacoes.map((x) => `<li><b>${esc(x.titulo)}</b>${(x.conta || []).length ? ": " + esc(x.conta.join(" ")) : ""}</li>`).join("") + `</ul></details>`;
     }
     if ((p.nao_cabe || []).length) {
       h += `<details class="naocabe"><summary>Não cabe: ${p.nao_cabe.length} ${p.nao_cabe.length === 1 ? "hipótese afastada" : "hipóteses afastadas"}</summary><ul>` +
@@ -139,7 +152,7 @@
     return L.join("\n");
   }
 
-  const api = { esc, html, resumo, ICO };
+  const api = { esc, html, resumo, fundamento, ICO };
   if (typeof module === "object" && module.exports) module.exports = api;
   else raiz.APTO_PAINEL_CORE = api;
 })(typeof self !== "undefined" ? self : this);

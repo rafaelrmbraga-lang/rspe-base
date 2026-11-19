@@ -21,6 +21,10 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.16) - NÃO PRECISA DO APTO
    o RSPE automático ligado, o mesmo pedido serve aos dois). O PDF é lido no
    navegador pelo leitor do APTO: o resultado é o mesmo do APTO. Nada é
    clicado nem enviado. Sem o relatório lido, o painel não conclui nada.
+ - Alertas: indulto ou comutação já decididos no SEEU (concedido ou
+   indeferido) não alertam; decreto não alcançado fica em "Não cabe"; avisos
+   de cadastro sem efeito para o assistido ficam recolhidos no fim. Cada
+   cartão tem "Copiar fundamento" (título, conta e base legal).
  - O cálculo é o do APTO (os mesmos arquivos, rodando dentro da extensão).
  - O SEEU continua igual: o painel só reserva a sua largura, não abre aba nem
    janela. "›" (ou Esc) recolhe numa lingueta na borda, com a contagem do que

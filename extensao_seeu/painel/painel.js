@@ -104,6 +104,14 @@ $("corpo").addEventListener("click", async (e) => {
   const b = e.target.closest("[data-acao]");
   if (!b) return;
   if (b.dataset.acao === "ficha-carregar") $("arquivoFicha").click();
+  if (b.dataset.acao === "copiar-fund") {
+    const it = ((atual && atual.painel && atual.painel.alertas) || [])[+b.dataset.i];
+    if (!it) return;
+    const ok = await copiar(C.fundamento(it));
+    b.textContent = ok ? "Copiado" : "Não copiou";
+    setTimeout(() => { b.textContent = "Copiar fundamento"; }, 2000);
+    return;
+  }
   if (b.dataset.acao === "copiar-diag") {
     const campo = $("corpo").querySelector(".diag textarea");
     aviso((await copiar(campo ? campo.value : "", campo)) ? "Diagnóstico copiado (sem dados pessoais)." : "Selecione o texto do diagnóstico e copie com Ctrl+C.");

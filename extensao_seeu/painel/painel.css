@@ -15,7 +15,8 @@ button{font:inherit;cursor:pointer}
 button:focus-visible,summary:focus-visible{outline:3px solid var(--foco);outline-offset:2px}
 /* cabeçalho */
 .p-head{background:var(--brand);color:#fff;padding:9px 12px;display:flex;align-items:center;gap:10px}
-.marca{font-weight:700;letter-spacing:.06em;font-size:14px}
+.marca{flex:none;display:inline-flex;width:38px;height:38px;border-radius:50%;background:#fff;align-items:center;justify-content:center;box-shadow:0 0 0 1px rgba(0,0,0,.08)}
+.marca img{display:block;width:34px;height:34px}
 .quem{flex:1;min-width:0;line-height:1.25}
 .quem .n{display:block;font-weight:600;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .quem .p{display:block;font-size:12px;opacity:.9;font-variant-numeric:tabular-nums}
@@ -144,3 +145,12 @@ input:focus-visible,textarea:focus-visible{outline:3px solid var(--foco);outline
 .diag p{margin:0 0 6px}
 .diag textarea{display:block;width:100%;box-sizing:border-box;margin:0 0 8px;padding:6px 8px;font:11.5px/1.4 ui-monospace,Consolas,monospace;color:var(--tx);background:var(--surface);border:1px solid var(--line-strong);border-radius:6px;resize:vertical}
 .diag textarea:focus-visible{outline:3px solid #F2B705;outline-offset:1px}
+/* ficha lida: uma linha só */
+.ficha.curta{align-items:center;padding:4px 8px;font-weight:600}
+.ficha.curta>svg{margin-top:0}
+.ficha.curta .ft{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* rodapé do cartão: conta e fundamento (abre) à esquerda, copiar à direita */
+.al-pe{display:flex;align-items:flex-start;gap:8px;margin-top:5px}
+.al-pe details{flex:1;min-width:0;margin-top:0}
+.al-pe .copiar-f{flex:none;margin-left:auto;line-height:16px}
+.lnk:focus-visible{outline:3px solid #F2B705;outline-offset:1px;border-radius:3px}

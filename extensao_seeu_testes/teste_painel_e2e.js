@@ -86,6 +86,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     ok(c.esperado_ficha.ficha === true, id + ": a ficha gerada devia ser desta pessoa");
     ok(assin === c.esperado_ficha.assinatura, id + ": com a ficha, assinatura da extensão diferente da do Python do APTO");
     ok(/carregada no painel/.test(txt), id + ": origem da ficha dita");
+    ok(/^Ficha SIAPEN · /.test(txt.trim()), id + ": a ficha lida numa linha só (" + txt.trim().slice(0, 60) + ")");
     await pg.screenshot({ path: path.join(SAIDA, "painel_ficha.png") });
     await f.click('[data-acao="ficha-retirar"]');
     await f.waitForSelector(".ficha.amarelo", { timeout: 60000 });

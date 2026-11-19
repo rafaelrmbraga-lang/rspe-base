@@ -1336,11 +1336,12 @@ def _lancamentos_seeu(r, crimes, ativos, incidentes, eventos):
             if fatos:
                 fr = _fr_seeu(r.get("fracao_progressao_aplicada"))
                 out.append(_item("verificar", "Data de referência do semiaberto (%s) não refeita depois da redução da pena: pedir o recálculo" % rs.fmt(sref),
-                                 "A progressão ao semiaberto foi lançada com referência em %s e decidida em %s. Depois disso: %s. A pena sobre a "
-                                 "qual a primeira progressão foi calculada mudou, mas a data de referência lançada continua a mesma e passa a "
-                                 "servir de data-base para o aberto: o SEEU não a recalcula sozinho. Refeita a conta com a pena atual (%s) e a fração aplicada (%s), a "
-                                 "referência do semiaberto se antecipa e, com ela, a progressão ao aberto. Pedir o recálculo da primeira "
-                                 "progressão, a nova data de referência e o recálculo das seguintes." % (
+                                 "O que houve: a progressão ao semiaberto tem data de referência em %s (decidida em %s). Depois dela, a pena "
+                                 "diminuiu: %s. Por que importa: a data de referência do semiaberto é o ponto de partida da conta do aberto. "
+                                 "Com a pena menor (%s), a fração (%s) é cumprida antes - a referência do semiaberto deveria ser anterior e, "
+                                 "com ela, a progressão ao aberto também chega antes. O SEEU não refaz essa conta sozinho. O que pedir: o "
+                                 "recálculo da progressão ao semiaberto com a pena atual, a nova data de referência e o recálculo da "
+                                 "progressão ao aberto." % (
                                      rs.fmt(sref), rs.fmt(sdec), "; ".join(fatos),
                                      rs.pena_extenso(r.get("pena_total")) if rs.pena_para_dias(r.get("pena_total")) else "a do RSPE", fr or "a do RSPE"),
                                  "LEP, arts. 111 e 112; CP, art. 42; STJ, Tema 1165 (a data da progressão é a do preenchimento dos requisitos).",

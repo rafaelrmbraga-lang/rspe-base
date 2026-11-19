@@ -42,7 +42,10 @@ NAO_SE_APLICA = re.compile(r"^(n[aã]o se aplica|pena cumprida|pena interrompida
 DECRETOS = [("i25", "exp25", "Indulto 2025", "Decreto 12.790/2025"), ("c25", "cexp25", "Comutação 2025", "Decreto 12.790/2025"),
             ("i24", "exp24", "Indulto 2024", "Decreto 12.338/2024"), ("c24", "cexp24", "Comutação 2024", "Decreto 12.338/2024"),
             ("i22", "exp22", "Indulto 2022", "Decreto 11.302/2022")]
-NAO_CABE = re.compile(r"^(vedad|n[aã]o atinge|fato posterior|prejudicad|n[aã]o se aplica|falta|n[aã]o cab)", re.I)
+NAO_CABE = re.compile(r"^(vedad|n[aã]o atinge|n[aã]o alcan|fato posterior|prejudicad|n[aã]o se aplica|falta|n[aã]o cab)", re.I)
+DECIDIDO = re.compile(r"^(concedid|indeferid)", re.I)  # o juízo já decidiu (consta no RSPE): não alerta
+# avisos de cadastro que não mudam o cálculo nem o que pedir pelo assistido: ficam numa seção recolhida, fora dos alertas
+SEM_EFEITO = re.compile(r"^(Pena na ficha .* difere da pena total do RSPE|Data impossível no cadastro)", re.I)
 PROXIMO = {"fechado": "semiaberto", "semiaberto": "aberto"}
 ORDEM = {"verde": 0, "amarelo": 1}  # compatibilidade com testes e com a lingueta
 
@@ -109,7 +112,7 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
     sem_ficha = _sem_ficha(m)
     reg = (m.get("regime") or "").strip()
     reg_l = rs._sem_acento(reg).lower()
-    marcos, beneficios, demais, nao_cabe = [], [], [], []
+    marcos, beneficios, demais, nao_cabe, observacoes = [], [], [], [], []
     ficha_txt = "comportamento carcerário e falta grave (ficha disciplinar)"
 
     # ---- pena e data-base (como o topo da ficha do assistido)
@@ -179,6 +182,8 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
         if NAO_CABE.match(v):
             nao_cabe.append({"titulo": "%s · %s" % (rot, dec), "motivo": txt})
             continue
+        if DECIDIDO.match(v) or DECIDIDO.match(txt):
+            continue  # já decidido pelo juízo: não é ponto a conferir
         conta = _linhas(m.get(kexp) or m.get("det" + k[1:]), 8)
         if re.match(r"sim|poss", v, re.I):
             beneficios.append(_item(k, not sem_ficha, rot, "tempo atendido", "%s · %s" % (dec, txt),
@@ -248,11 +253,14 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
             alertas.append(dict(x))
     confere = []
     for x in beneficios + demais:
-        (confere if x["status"] == "verde" else alertas).append(x)
+        if x["status"] != "verde" and SEM_EFEITO.match(x["titulo"] or ""):
+            observacoes.append(x)
+        else:
+            (confere if x["status"] == "verde" else alertas).append(x)
     cont = {"verde": len(confere) + sum(1 for x in linhas if not x["alerta"]), "amarelo": len(alertas)}
     return {"processo": m.get("id") or r.get("processo_execucao") or "", "nome": m.get("nome") or r.get("nome") or "", "regime": reg,
             "hoje": rs.fmt(hoje), "pena": pena, "marcos": linhas, "alertas": alertas, "confere": confere, "crimes": crimes,
-            "nao_cabe": nao_cabe, "contagem": cont, "ficha": not sem_ficha, "ficha_info": ficha_info}
+            "nao_cabe": nao_cabe, "observacoes": observacoes, "contagem": cont, "ficha": not sem_ficha, "ficha_info": ficha_info}
 
 
 _ULTIMO = {}  # processo (dígitos) -> (modelo do APTO, data de referência) da última análise nesta sessão do motor
