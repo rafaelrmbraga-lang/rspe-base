@@ -15,11 +15,11 @@
   const COR = {   // barra à esquerda, fundo da linha, etiqueta (fundo, texto), nome
     decisao: ["#1F4E8C", "#E8F0FB", "#1F4E8C", "#fff", "Decisão"],
     despacho: ["#5B9BD5", "#F1F7FD", "#D6E7F7", "#173F6B", "Despacho"],
-    mp: ["#B3261E", "#FCEDEC", "#B3261E", "#fff", "MP"],
+    mp: ["#B0103A", "#FCE8EE", "#B0103A", "#fff", "MP"],                 // vermelho carmim (longe do laranja do cartório)
     defensoria: ["#1D7A4A", "#EAF6EF", "#1D7A4A", "#fff", "DPE"],
     advogado: ["#6B3FA0", "#F4EFFB", "#6B3FA0", "#fff", "ADV"],
     unidade: ["#C99A06", "#FFF8DC", "#F2D35B", "#4D3B00", "Depen"],
-    cartorio: ["#D9661F", "#FDF1E8", "#F6CDAF", "#6B2C05", "Cartório"],
+    cartorio: ["#E67E00", "#FFF4E3", "#FFD7A3", "#5C3200", "Cartório"],    // laranja âmbar
     audiencia: ["#0E7490", "#EAF6F9", "#0E7490", "#fff", "Audiência"],
     pericia: ["#7A5230", "#F7F0E9", "#7A5230", "#fff", "Perícia"],
   };
