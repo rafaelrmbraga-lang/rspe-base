@@ -154,7 +154,7 @@
   // Cada segmento é um botão: o detalhe (quanto falta, fração) abre no clique - nada só no mouse. Estado: ícone + texto.
   const CICO = {
     proximo: '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
-    atingida: '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    vencida: '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false"><path d="M12 5v9" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round"/><circle cx="12" cy="19" r="2" fill="currentColor"/></svg>',
     copiar: '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>',
   };
   const SVG = (d, extra) => `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${extra || ""}>${d}</svg>`;
@@ -179,9 +179,11 @@
     const reg = String(d.regime || "").replace(/\s*-\s*ATIVO$/i, "");
     const seg = (d.marcos || []).filter((m) => m.data && m.data !== "—").map((m, i) => {
       const sub = m.id === "prog" && /ao\s+(\S+)/i.test(m.rotulo) ? " · " + /ao\s+(\S+)/i.exec(m.rotulo)[1] : "";
-      const est = m.destaque ? `<span class="est ${esc(m.destaque)}">${CICO[m.destaque] || ""}<span class="vh">${m.destaque === "proximo" ? "próximo" : "atingida"}</span></span>` : "";
+      // progressão/livramento: vencida (data já passou) = vermelho com "!"; a até 60 dias = âmbar com relógio; senão, branco
+      const dest = m.destaque === "atingida" ? "vencida" : m.destaque;
+      const est = dest ? `<span class="est ${esc(dest)}">${CICO[dest] || ""}<span class="vh">${dest === "proximo" ? "a menos de 60 dias" : "vencida"}</span></span>` : "";
       const nome = `${esc(m.rotulo)}: ${esc(m.data)}${m.quando ? ", " + esc(m.quando) : ""}${m.alerta ? ", com ponto a conferir" : ""}`;
-      return `<button type="button" class="sg${m.destaque ? " " + esc(m.destaque) : ""}" data-chip="${i}" aria-expanded="false" aria-label="${nome}">` +
+      return `<button type="button" class="sg${dest ? " " + esc(dest) : ""}" data-chip="${i}" aria-expanded="false" aria-label="${nome}">` +
         `<span class="rot">${esc(CROT[m.id] || m.rotulo)}${esc(sub)}${m.alerta ? '<b class="mk" aria-hidden="true">!</b>' : ""}</span>` +
         `<span class="dt">${esc(m.data)}${est}</span></button>`;
     }).join("");

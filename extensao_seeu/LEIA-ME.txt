@@ -30,7 +30,8 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.17) - NÃO PRECISA DO APTO
    antecipada, indulto (cadeado aberto), comutação (calendário com "menos"),
    extinção, prescrição e remição pendente - verde cabe, âmbar a conferir;
    clicar abre o cartão no painel, com a conta e o fundamento. Marco
-   atingido: ✓ verde; próximo: relógio.
+   de progressão ou livramento vencido: vermelho com "!"; a até 60 dias: âmbar
+   com relógio; os demais, brancos.
  - "Copiar fundamento" copia o texto corrido, pronto para a petição (sem as
    marcas do painel), com a base legal no fim.
  - Alertas: indulto ou comutação já decididos no SEEU (concedido ou

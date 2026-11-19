@@ -20,7 +20,9 @@ ok(!/<ul class="marcos"/.test(h) && !h.includes("Data-base (progressão)") && !h
 // chips: regime e marcos numa faixa; próximo/atingida com ícone e texto; detalhe no clique; nº e nome com copiar na barra fixa
 const ch = C.chips(C.dadosChips(res), false), chf = C.chips(C.dadosChips(res), true);
 ok(ch.includes(">Regime<") && ch.includes(">Fechado<") && ch.includes(">Data-base<") && ch.includes("01/01/2024"), "chips: regime e data-base");
-ok(/class="sg proximo"[\s\S]*?<span class="est proximo"><svg[\s\S]*?<\/svg><span class="vh">próximo<\/span><\/span>/.test(ch), "chip próximo: só o ícone à vista (o texto para o leitor de tela)");
+ok(/class="sg proximo"[\s\S]*?<span class="est proximo"><svg[\s\S]*?<\/svg><span class="vh">a menos de 60 dias<\/span><\/span>/.test(ch), "chip próximo: só o ícone à vista (o texto para o leitor de tela)");
+const venc = C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { marcos: [{ id: "prog", rotulo: "Progressão ao aberto", data: "01/01/2026", destaque: "atingida" }] }) }), false);
+ok(/class="sg vencida"[\s\S]*?<span class="est vencida"><svg[\s\S]*?<span class="vh">vencida<\/span>/.test(venc), "progressão vencida: vermelho, com ícone e texto para o leitor de tela");
 // ícones dos benefícios: cada um abre o seu cartão no painel; estado no nome acessível; indulto e comutação com ícone próprio
 const ic = C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { icones: [{ tipo: "st", rotulo: "Saída temporária", estado: "conferir", alvo: "st" },
   { tipo: "ind", rotulo: "Indulto 2025", estado: "ok", alvo: "i25" }, { tipo: "com", rotulo: "Comutação 2025", estado: "conferir", alvo: "c25" }] }) }), false);
