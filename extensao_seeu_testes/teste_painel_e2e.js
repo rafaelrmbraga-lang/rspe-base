@@ -156,7 +156,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     });
     const linhasBg = await pg.evaluate(() => [...document.querySelectorAll("table.resultTable tbody > tr[id^='mov']")].map((tr) => getComputedStyle(tr).backgroundColor));
     ok(linhasBg.every((f) => !/168, 240, 216/.test(f)), id + ": nem a linha (por baixo da célula esmaecida) fica com o realce do SEEU (" + linhasBg.join(" | ") + ")");
-    ok(fundos[3] === "rgb(251, 228, 228)" && fundos[6] === "rgb(223, 242, 231)" && fundos[1] === "rgb(227, 236, 250)", id + ": MP, DPE e decisão com as cores do esquema (" + [fundos[3], fundos[6], fundos[1]].join(" | ") + ")");
+    ok(fundos[3] === "rgb(248, 211, 211)" && fundos[6] === "rgb(205, 235, 217)" && fundos[1] === "rgb(211, 226, 248)", id + ": MP, DPE e decisão com as cores do esquema (" + [fundos[3], fundos[6], fundos[1]].join(" | ") + ")");
     ok(fundos.every((f) => !/168, 240, 216/.test(f)), id + ": o realce nativo do SEEU não aparece por baixo (" + fundos.join(" | ") + ")");
     await pg.screenshot({ path: path.join(SAIDA, "movimentacoes_realce.png"), fullPage: true });
     ok(L.every((x) => (x[4] === "0") === (x[2] === "0.55")), id + ": esmaecido só o que não tem arquivo vinculado (" + L.map((x) => x[4] + ":" + x[2]).join(",") + ")");

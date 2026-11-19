@@ -17,9 +17,10 @@
   //   suave: despacho, ADV, Depen, perícia e audiência - faixa fina e etiqueta suave, sem fundo;
   //   cartório: sem etiqueta, texto em cinza (é a maior parte das movimentações: some, e o resto salta).
   const COR = {   // nível, cor da faixa/etiqueta forte, fundo, etiqueta (fundo, texto), nome
-    decisao: ["forte", "#1F4E8C", "#E3ECFA", "#1F4E8C", "#fff", "Decisão"],
-    mp: ["forte", "#C62828", "#FBE4E4", "#C62828", "#fff", "MP"],
-    defensoria: ["forte", "#1B7F4B", "#DFF2E7", "#1B7F4B", "#fff", "DPE"],
+    // fundos um tom acima do protótipo: na tela comum (sem a densidade 2x) e com o texto miúdo do SEEU, o tom claro some
+    decisao: ["forte", "#1F4E8C", "#D3E2F8", "#1F4E8C", "#fff", "Decisão"],
+    mp: ["forte", "#C62828", "#F8D3D3", "#C62828", "#fff", "MP"],
+    defensoria: ["forte", "#1B7F4B", "#CDEBD9", "#1B7F4B", "#fff", "DPE"],
     despacho: ["suave", "#1F4E8C", "", "#E3ECF7", "#1F4E8C", "Despacho"],
     advogado: ["suave", "#4B2A78", "", "#EEE7F7", "#4B2A78", "ADV"],
     unidade: ["suave", "#8A6A00", "", "#FBEFC5", "#5C4300", "Depen"],
@@ -32,7 +33,12 @@
   const T = "table.apto-movs tbody>";
   // a linha também (a célula esmaecida é translúcida: o fundo da linha, que o realce do SEEU pinta, apareceria por baixo)
   const neutro = `${T}tr[data-apto-mov],${T}tr[data-apto-det],${T}tr[data-apto-mov]>td,${T}tr[data-apto-det]>td{background-color:#fff!important;background-image:none!important}\n`;
-  const css = neutro + Object.entries(COR).map(([k, [nivel, cor, bg, tb, tc]]) => {
+  // tamanho: o SEEU escreve as movimentações em 11px; nas linhas classificadas, o mesmo corpo do protótipo (título 13px, texto
+  // 12.5px, cargo 11.5px) e um respiro maior - as linhas ficam do tamanho que se lê sem esforço
+  const tam = `${T}tr[data-apto-mov]>td,${T}tr[data-apto-det]>td{font-size:12.5px!important;line-height:1.4!important;padding-top:9px!important;padding-bottom:9px!important}` +
+    `${T}tr[data-apto-mov]>td b,${T}tr[data-apto-mov]>td b div{font-size:13px!important}` +
+    `${T}tr[data-apto-mov]>td font,${T}tr[data-apto-mov]>td font b{font-size:11.5px!important}\n`;
+  const css = neutro + tam + Object.entries(COR).map(([k, [nivel, cor, bg, tb, tc]]) => {
     const sel = `${T}tr[data-apto-mov="${k}"][data-apto-mov]`, det = `${T}tr[data-apto-det="${k}"][data-apto-det]`;
     if (nivel === "cartorio") {
       return `${sel}>td,${sel}>td *{color:#8F969C!important}${sel}>td b,${sel}>td b *{color:#6F767D!important;font-weight:400!important}` +
@@ -43,7 +49,7 @@
       (nivel === "forte" ? `${sel}>td b{font-weight:800!important;color:#1E2226!important}` : `${sel}>td b{font-weight:700!important}`) +
       `tr[data-apto-mov="${k}"] .apto-tag{background:${tb};color:${tc}}`;
   }).join("\n") + `
-    .apto-tag{display:inline-block;margin:0 7px 2px 0;padding:1px 8px;border-radius:999px;font:700 10.5px/1.6 "Source Sans 3","Segoe UI",system-ui,sans-serif;
+    .apto-tag{display:inline-block;margin:0 7px 2px 0;padding:1px 8px;border-radius:999px;font:700 11px/1.6 "Source Sans 3","Segoe UI",system-ui,sans-serif;
       letter-spacing:.02em;vertical-align:1px;white-space:nowrap}
     table.apto-movs.apto-esmaecer tr[data-apto-arq="0"]>td{opacity:.55}
     tr[data-apto-det]>td .extendedinfo,tr[data-apto-det]>td table{background:transparent!important}
