@@ -70,6 +70,14 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     ok(await pg.evaluate(() => document.getElementById("barraTituloStatusProcessual").nextElementSibling.id === "apto-chips"), id + ": chips logo abaixo do nº do processo");
     const nseg = await pg.locator("#apto-chips button.sg").count();
     ok(nseg >= 2, id + ": chips com os marcos (" + nseg + ")");
+    // saída temporária / progressão antecipada: o checklist dos requisitos aparece ao passar o mouse
+    const comPop = pg.locator("#apto-chips .benw:has(.pop)");
+    if (await comPop.count()) {
+      await comPop.first().hover();
+      ok(await comPop.first().locator(".pop").isVisible(), id + ": checklist dos requisitos ao passar o mouse");
+      await pg.screenshot({ path: path.join(SAIDA, `chips_checklist_${id}.png`) });
+      await pg.mouse.move(5, 700);
+    }
     await pg.screenshot({ path: path.join(SAIDA, `painel_${id}.png`) });
     if (id === Object.keys(DADOS)[0]) {
       await pg.locator("#apto-chips button.sg").first().click();
@@ -103,6 +111,30 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     const f2 = await moldura();
     await f2.waitForSelector(".h-al", { timeout: 30000 });
     ok(pedidos.length - n0 === 1, id + ": trocar de aba não deve refazer a leitura (" + pedidos.slice(n0 + 1).map((p) => p.url.slice(0, 90)).join(" | ") + ")");
+  }
+  // destaques da aba Movimentações: pela categoria do evento; rotina esmaecida; filtros na barra acima da tabela
+  {
+    const [id] = Object.entries(DADOS)[0];
+    await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabMovimentacoesProcesso");
+    await pg.waitForSelector("#apto-movs .ch", { timeout: 15000 });
+    const cat = async () => pg.evaluate(() => [...document.querySelectorAll("table.resultTable tbody > tr[id^='mov']")].map((tr) =>
+      [tr.dataset.aptoMov, getComputedStyle(tr).display !== "none", getComputedStyle(tr.children[1]).opacity, (tr.querySelector(".apto-tag") || {}).textContent || ""]));
+    let L = await cat();
+    ok(L[1][0] === "decisao" && L[1][3] === "Decisão" && L[3][0] === "mp" && L[5][0] === "unidade" && L[6][0] === "defensoria" && L[8][0] === "despacho" && L[9][0] === "audiencia",
+      id + ": movimentações classificadas pelo conteúdo (" + L.map((x) => x[0]).join(",") + ")");
+    ok(L[0][0] === "rotina" && L[0][2] === "0.45" && L[0][3] === "", id + ": rotina esmaecida e sem etiqueta");
+    await pg.screenshot({ path: path.join(SAIDA, "movimentacoes.png"), fullPage: true });
+    await pg.locator('#apto-movs [data-rot="ocultar"]').click();
+    L = await cat();
+    ok(L.filter((x) => x[0] === "rotina").every((x) => !x[1]) && L.filter((x) => x[0] !== "rotina").every((x) => x[1]), id + ": ocultar a rotina");
+    await pg.locator('#apto-movs [data-cat="mp"]').click();
+    L = await cat();
+    ok(L.filter((x) => x[1]).every((x) => x[0] === "mp"), id + ": filtro só MP");
+    await pg.locator('#apto-movs [data-limpar]').click();
+    await pg.locator('#apto-movs [data-rot="esmaecer"]').click();
+    await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabMovimentacoesProcesso");
+    await pg.waitForSelector("#apto-movs .ch", { timeout: 15000 });
+    ok(await pg.evaluate(() => document.querySelector("#apto-movs").shadowRoot.querySelector('[data-rot="esmaecer"]').getAttribute("aria-pressed")) === "true", id + ": escolha lembrada");
   }
   // ficha disciplinar: carregar o PDF pelo botão do painel (a ficha é lida no navegador: pdf.js + o leitor do APTO)
   {

@@ -33,7 +33,19 @@ ok(C.html(res).includes('data-id="i25"'), "cartão com o id para o chip levar at
 const fp = C.fundamento({ titulo: "T", conta: ["1) O que houve: a pena diminuiu. O que pedir: o recálculo da progressão"], fundamento: "LEP, art. 112." });
 ok(fp === "A pena diminuiu. Requer-se o recálculo da progressão.\n\nFundamento: LEP, art. 112.", "fundamento pronto para a petição (" + JSON.stringify(fp) + ")");
 ok((ch.match(/data-chip=/g) || []).length === (ch.match(/data-det=/g) || []).length && /aria-expanded="false"/.test(ch), "cada chip abre o seu detalhe (botão, sem depender do mouse)");
-ok(chf.includes('data-copiar="processo"') && chf.includes('data-copiar="nome"') && chf.includes(res.painel.processo) && chf.includes(res.painel.nome), "barra fixa: nº e nome, com copiar");
+ok(/<button type="button" class="txt num" data-copiar="processo"[^>]*>9900001-00\.2026\.8\.12\.0001<\/button>/.test(chf) && /class="txt nm" data-copiar="nome"[^>]*>Fulano<\/button>/.test(chf),
+  "barra fixa: o próprio nº e o nome copiam ao clicar");
+ok(!ch.includes("data-copiar") && !/class="cp"/.test(chf), "sem botões de copiar à parte (abaixo do nº, o SEEU já mostra nº e nome)");
+const pq = C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { icones: [{ tipo: "st", rotulo: "Saída temporária", estado: "conferir", alvo: "st",
+  itens: [{ ok: true, txt: "Semiaberto" }, { ok: false, txt: "Sem trabalho" }, { ok: null, txt: "Sem ficha" }] }] }) }), false);
+ok(/aria-describedby="req-l0"/.test(pq) && /<span class="pop" role="tooltip" id="req-l0">/.test(pq) && /ri ok[\s\S]*ri x[\s\S]*ri q/.test(pq) && pq.includes("(não atendido)"),
+  "saída temporária: checklist dos requisitos ao passar o mouse ou com o foco (atendido, não atendido, a conferir)");
+// movimentações: pelo conteúdo do evento
+const M = (g, t, c) => C.classificarMov(g, t, c || "");
+ok(M(["JUIZ"], "CONCEDIDA PROGRESSÃO DE REGIME") === "decisao" && M(["JUIZ"], "PROFERIDO DESPACHO DE MERO EXPEDIENTE") === "despacho", "movimentações: decisão e despacho");
+ok(M(["PROMOTOR"], "JUNTADA DE MANIFESTAÇÃO") === "mp" && M(["PROMOTOR", "SEMARQUIVO"], "CONFIRMADA A INTIMAÇÃO ELETRÔNICA") === "rotina", "movimentações: MP fala x MP só confirma intimação");
+ok(M(["DEFENSOR"], "JUNTADA DE MANIFESTAÇÃO") === "defensoria" && M(["OUTROS"], "JUNTADA DE OFÍCIO - DEPEN", "Depen/Seap") === "unidade", "movimentações: Defensoria e unidade prisional");
+ok(M(["SERVIDOR"], "REMETIDOS OS AUTOS PARA DEPEN") === "rotina" && M(["JUIZ"], "RETIFICADO O MOVIMENTO CONCLUSOS PARA DECISÃO") === "rotina", "movimentações: rotina do cartório");
 ok(/data-abrir="1"[^>]*>[\s\S]*?conferir<\/button>/.test(ch) === !!res.painel.contagem.amarelo, "chip do que falta conferir abre o painel");
 ok(!C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { nome: "<b>x</b>" }) }), true).includes("<b>x</b>"), "chips: texto escapado");
 const chm = C.chips(C.dadosChips(res), false);

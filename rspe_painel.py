@@ -309,8 +309,13 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
         if not its:
             continue
         r0 = its[0]["titulo"] if tipo in ("ind", "com") else rot
-        icones.append({"tipo": tipo, "rotulo": r0 + (" +%d" % (len(its) - 1) if len(its) > 1 else ""),
-                       "estado": "ok" if any(x["status"] == "verde" for x in its) else "conferir", "alvo": its[0]["id"]})
+        ic = {"tipo": tipo, "rotulo": r0 + (" +%d" % (len(its) - 1) if len(its) > 1 else ""),
+              "estado": "ok" if any(x["status"] == "verde" for x in its) else "conferir", "alvo": its[0]["id"]}
+        if tipo in ("st", "pa"):
+            # o checklist dos requisitos (como o quadro do APTO ao passar o mouse no ícone): atendido, não atendido ou a conferir
+            ic["itens"] = [{"ok": x.get("ok") if x.get("ok") in (True, False) else None, "txt": x.get("txt") or ""}
+                           for x in m.get(tipo + "_itens") or [] if x.get("txt")]
+        icones.append(ic)
     return {"processo": m.get("id") or r.get("processo_execucao") or "", "nome": m.get("nome") or r.get("nome") or "", "regime": reg,
             "hoje": rs.fmt(hoje), "pena": pena, "marcos": linhas, "alertas": alertas, "confere": confere, "crimes": crimes,
             "nao_cabe": nao_cabe, "observacoes": observacoes, "icones": icones, "contagem": cont, "ficha": not sem_ficha, "ficha_info": ficha_info}
@@ -392,7 +397,46 @@ def analisar_rspe(txt):
     if e.get("hash"):
         r["_hash"] = str(e["hash"])
     fichas = [f for f in e.get("fichas") or [] if isinstance(f, dict)]
-    return json.dumps(analisar(r, contexto_fichas(fichas), hoje, list(r.get("_leitura_parcial") or []), len(fichas)), ensure_ascii=False)
+    p = analisar(r, contexto_fichas(fichas), hoje, list(r.get("_leitura_parcial") or []), len(fichas))
+    alt = medida_alternativa(e.get("capa") or {})
+    if alt:
+        p = _sem_condenacao(p, alt)
+    return json.dumps(p, ensure_ascii=False)
+
+
+# medidas sem condenação (o assunto principal da capa do SEEU diz o que é): acordo de não persecução penal, transação penal e
+# suspensão condicional do processo. Não há pena nem condenação cadastrada: o painel não aponta isso como falha.
+ALTERNATIVAS = [(re.compile(r"acordo\s+de\s+n[aã]o\s+persecu", re.I), "anpp", "Acordo de Não Persecução Penal", "ANPP", "CPP, art. 28-A"),
+                (re.compile(r"transa[cç][aã]o\s+penal", re.I), "transacao", "Transação penal", "Transação penal", "Lei 9.099/1995, art. 76"),
+                (re.compile(r"suspens[aã]o\s+condicional\s+do\s+processo", re.I), "sursis_processual", "Suspensão condicional do processo",
+                 "Sursis processual", "Lei 9.099/1995, art. 89")]
+SEM_CONDENACAO = re.compile(r"sem condena|n[aã]o iniciada|sem c[aá]lculo de pena|n[aã]o iniciou|guia sem pena|pena integralmente cumprida", re.I)
+
+
+def medida_alternativa(capa):
+    """{"classe", "assunto"} da capa do processo no SEEU -> a medida sem condenação (dict) ou None."""
+    assunto = str((capa or {}).get("assunto") or "")
+    for rx, tipo, nome, curto, fund in ALTERNATIVAS:
+        if rx.search(assunto):
+            return {"tipo": tipo, "nome": nome, "curto": curto, "fundamento": fund, "assunto": assunto.strip()[:120]}
+    return None
+
+
+def _sem_condenacao(p, alt):
+    """O painel de uma medida sem condenação: sem os alertas de condenação ou pena ausente, sem marcos, benefícios, ficha e hipóteses
+    afastadas (nada disso se aplica); um cartão diz o que é e onde acompanhar as condições."""
+    q = {k: v for k, v in p.items() if k not in ("assinatura", "chave", "motor", "painel", "base_juridica", "base_digital")}
+    q["alertas"] = [a for a in q.get("alertas") or [] if a.get("id") == "faltou" or not (SEM_CONDENACAO.search(a.get("titulo") or "")
+                    or a.get("id") in ("atestado", "ficha_velha", "ficha_outra", "st", "pa", "rem") or re.match(r"^[ic]\d\d$", a.get("id") or "")
+                    or a.get("id") in ("presc", "ext", "prog", "liv", "term", "db"))]
+    q["confere"], q["marcos"], q["nao_cabe"], q["icones"], q["crimes"] = [], [], [], [], q.get("crimes") or []
+    q["pena"] = dict(q.get("pena") or {}, aviso="")
+    q["regime"] = alt["curto"]
+    q["especial"] = alt
+    q["contagem"] = {"verde": 0, "amarelo": len(q["alertas"])}
+    q["assinatura"] = _assinar(q)
+    q.update({k: p[k] for k in ("chave", "motor", "painel", "base_juridica", "base_digital") if k in p})
+    return q
 
 
 def ler_ficha(txt):

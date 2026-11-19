@@ -10,7 +10,7 @@ A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI s
 lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
 SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
 
-PAINEL DO APTO NA PÁGINA DO PROCESSO (1.17) - NÃO PRECISA DO APTO
+PAINEL DO APTO NA PÁGINA DO PROCESSO (1.18) - NÃO PRECISA DO APTO
  - Ao abrir um processo no SEEU, a análise aparece à direita, na ordem da ficha
    do assistido: pena, marcos, benefícios e demais pontos. Verde "Confere" =
    há certeza; amarelo "Conferir" = conferir (sem "agir já"). Cada item abre a
@@ -33,6 +33,20 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.17) - NÃO PRECISA DO APTO
    de progressão ou livramento vencido: vermelho com "!"; a até 60 dias: âmbar
    com relógio; os demais, brancos. A pena (total, cumprida, remanescente)
    fica na capa do SEEU: saiu do painel lateral.
+ - Barra fixa (1.18): clicar no nº ou no nome copia. Saída temporária e
+   progressão antecipada: ao passar o mouse (ou com o foco do teclado), o
+   checklist dos requisitos (✓ atendido, ✗ não atendido, ? a conferir).
+ - Destaques das movimentações (1.18): na aba Movimentações, cada evento é
+   classificado pelo conteúdo, e não só por quem movimentou - decisão,
+   despacho, MP, Defensoria, unidade prisional, audiência, parte - com cor e
+   etiqueta; a rotina do cartório (recebidos, intimação confirmada, remessas,
+   conclusos, ato ordinatório, ciência, prazo decorrido) fica esmaecida. A
+   barra acima da tabela filtra por categoria (com as contagens) e esmaece,
+   oculta ou mostra a rotina; a escolha é lembrada.
+ - ANPP, transação penal e suspensão condicional do processo (1.18): pelo
+   assunto principal da capa do SEEU, o painel reconhece a medida sem
+   condenação e não aponta "sem condenação" nem "não iniciou"; mostra o que
+   é e que as condições se acompanham na aba Medidas Diversas da Prisão.
  - "Copiar fundamento" copia o texto corrido, pronto para a petição (sem as
    marcas do painel), com a base legal no fim.
  - Alertas: indulto ou comutação já decididos no SEEU (concedido ou

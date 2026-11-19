@@ -28,6 +28,21 @@
     return "";
   }
 
+  // ---------- capa do processo: classe e assunto principal (dizem se é ANPP, transação penal ou sursis processual - sem condenação)
+  function campoCapa(rotulo) {
+    const rx = new RegExp("^\\s*" + rotulo + "\\s*:?\\s*$", "i");
+    for (const el of document.querySelectorAll("td, th, label, span, dt, div.r, b, strong")) {
+      if (el.children.length > 1 || !rx.test(el.textContent || "")) continue;
+      let v = el.nextElementSibling;
+      while (v && !(v.textContent || "").trim()) v = v.nextElementSibling;
+      if (v) return (v.textContent || "").replace(/\s+/g, " ").trim().slice(0, 160);
+    }
+    return "";
+  }
+  function capa() {
+    return { classe: campoCapa("Classe Processual"), assunto: campoCapa("Assunto Principal") };
+  }
+
   // ---------- leitura do RSPE (só leitura: o relatório que o SEEU emite para o processo aberto)
   function base64(bytes) {
     let t = "";
@@ -92,9 +107,25 @@
     .ben.q:hover{background:#F3E6BF}
     .ben:focus-visible{outline:3px solid #F2B705;outline-offset:2px}
     .mk{color:#8A6A00;margin-left:4px}
-    .id{display:inline-flex;align-items:center;gap:6px;min-width:0}
-    .num{font-weight:700;color:#B00000;font-variant-numeric:tabular-nums;white-space:nowrap}
-    .nm{font-weight:600;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .id{display:inline-flex;align-items:center;gap:4px;min-width:0}
+    .txt{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;min-height:30px;padding:0 6px;border-radius:6px;cursor:copy;white-space:nowrap}
+    .txt:hover{background:#E6ECF1}
+    .txt:focus-visible{outline:3px solid #F2B705;outline-offset:1px}
+    .num{font-weight:700;color:#B00000;font-variant-numeric:tabular-nums}
+    .nm{font-weight:600;max-width:280px;overflow:hidden;text-overflow:ellipsis}
+    .ok-cp{font-size:11.5px;font-weight:700;color:#145232;min-width:0}
+    .benw{position:relative;display:inline-flex}
+    .pop{display:none;position:absolute;top:calc(100% + 6px);left:0;z-index:5;width:max-content;max-width:380px;padding:9px 11px;background:#fff;
+      border:1px solid #C9CED2;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.16);font:12.5px/1.4 "Source Sans 3","Segoe UI",system-ui,sans-serif;
+      color:#1E2226;white-space:normal}
+    .benw:hover .pop,.benw:focus-within .pop{display:block}
+    .pop b{display:block;margin-bottom:5px;font-size:12.5px}
+    .ri{display:flex;gap:7px;align-items:flex-start;margin:3px 0}
+    .ri i{flex:none;width:16px;height:16px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font:700 10.5px/1 system-ui;margin-top:1px}
+    .ri.ok i{background:#1D7A4A;color:#fff}
+    .ri.x i{background:#B3261E;color:#fff}
+    .ri.q i{background:#C99A06;color:#fff}
+    .pop small{display:block;margin-top:6px;color:#5C636A;font-size:11.5px}
     .cp,.conf{all:unset;box-sizing:border-box;display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:0 9px;border-radius:8px;
       font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap}
     .cp{border:1px solid #C9CED2;background:#fff;color:#1D5A3B}
@@ -122,9 +153,12 @@
       const cp = e.target.closest("[data-copiar]");
       if (cp && dadosC) {
         const ok = await copiarTexto(cp.dataset.copiar === "nome" ? dadosC.nome : dadosC.processo);
-        const sp = cp.querySelector("span"), antes = sp.textContent;
-        sp.textContent = ok ? "Copiado" : "Não copiou";
-        setTimeout(() => { sp.textContent = antes; }, 1600);
+        const av = cp.parentElement.querySelector(".ok-cp");
+        if (av) {
+          av.textContent = ok ? (cp.dataset.copiar === "nome" ? "Nome copiado" : "Nº copiado") : "Não copiou";
+          clearTimeout(av._t);
+          av._t = setTimeout(() => { av.textContent = ""; }, 1600);
+        }
         return;
       }
       const fo = e.target.closest("[data-focar]");
@@ -151,7 +185,7 @@
     if (barra) barra.inert = !(sim && dadosC);
   }
   function pintarChips(d) {
-    dadosC = d && (d.marcos || []).length ? d : null;
+    dadosC = d && ((d.marcos || []).length || d.especial) ? d : null;
     if (!dadosC) {
       if (chipsHost) { chipsHost.remove(); chipsHost = null; }
       if (barra) barra.innerHTML = "";
@@ -195,6 +229,12 @@
     if (recuo > 0) chipsHost.style.marginRight = recuo + "px";
   }
   window.addEventListener("resize", () => desviar());
+  // Esc fecha o checklist aberto pelo foco (quem usa o teclado)
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const alvo = e.composedPath()[0];
+    if (alvo && alvo.closest && alvo.closest(".benw")) alvo.blur();
+  });
 
   // ---------- painel (moldura da extensão) e lingueta
   let host, raiz, moldura, lingueta, reserva, contagem = { verde: 0, amarelo: 0 };
@@ -278,7 +318,7 @@
     if (d.apto === "lerRspe") {
       let x;
       try { x = await lerRspe((etapa) => paraPainel({ apto: "progresso", etapa }), !!d.novo); } catch (e) { x = { erro: "falha", diag: { falha: String((e && e.message) || e).slice(0, 80) } }; }
-      paraPainel(Object.assign({ apto: "rspe" }, x));
+      paraPainel(Object.assign({ apto: "rspe", capa: capa() }, x));
     }
   });
 

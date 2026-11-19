@@ -159,3 +159,8 @@ input:focus-visible,textarea:focus-visible{outline:3px solid var(--foco);outline
 [data-id].foco{box-shadow:0 0 0 3px #F2B705;transition:box-shadow .2s ease-out}
 @media (prefers-reduced-motion:reduce){[data-id].foco{transition:none}}
 .aviso-exec.solto{margin:8px 0 0;padding:6px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}
+/* medida sem condenação (ANPP, transação penal, sursis processual) */
+.esp{margin-top:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--brand);border-radius:8px}
+.esp b{font-size:14px}
+.esp p{margin:5px 0 4px;color:var(--tx-2);font-size:13px;line-height:1.45}
+.esp small{color:var(--tx-3);font-size:12px}

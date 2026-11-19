@@ -130,6 +130,38 @@ def _formula(prev, frac):
     return "%s" % (prev or "")
 
 
+# movimentações no formato da aba real do SEEU (tabela resultTable; o id da linha traz os grupos do realce; o título do evento em
+# negrito; "Movimentado Por" com o cargo): eventos fictícios de cada tipo, do mais novo ao mais antigo
+MOVS = [("SERVIDOR,SEMARQUIVO", "REMETIDOS OS AUTOS PARA DEFENSORIA PÚBLICA", "Servidor Exemplo", "Analista Judiciário"),
+        ("JUIZ", "CONCEDIDA PROGRESSÃO DE REGIME", "Juiz Exemplo", "Magistrado(a)"),
+        ("SERVIDOR,SEMARQUIVO", "CONCLUSOS PARA DECISÃO", "Servidor Exemplo", "Analista Judiciário"),
+        ("PROMOTOR", "JUNTADA DE MANIFESTAÇÃO", "Promotor Exemplo", "Membro(a) do Ministério Público"),
+        ("PROMOTOR,SEMARQUIVO", "CONFIRMADA A INTIMAÇÃO ELETRÔNICA", "Promotor Exemplo", "Membro(a) do Ministério Público"),
+        ("OUTROS", "JUNTADA DE PETIÇÃO DE ATESTADO DE TRABALHO/ESTUDO/LEITURA", "Unidade Exemplo", "Depen/Seap"),
+        ("DEFENSOR", "JUNTADA DE MANIFESTAÇÃO", "Defensor Exemplo", "Defensor(a) Público(a)"),
+        ("DEFENSOR,SEMARQUIVO", "RECEBIDOS OS AUTOS", "Defensor Exemplo", "Defensor(a) Público(a)"),
+        ("JUIZ", "PROFERIDO DESPACHO DE MERO EXPEDIENTE", "Juiz Exemplo", "Magistrado(a)"),
+        ("SERVIDOR,SEMARQUIVO,AUDIENCIA", "AUDIÊNCIA DE JUSTIFICATIVA DESIGNADA", "Servidor Exemplo", "Analista Judiciário"),
+        ("OUTROS", "JUNTADA DE OFÍCIO - DEPEN", "Unidade Exemplo", "Depen/Seap"),
+        ("SERVIDOR,SEMARQUIVO", "ATO ORDINATÓRIO PRATICADO", "Servidor Exemplo", "Analista Judiciário"),
+        ("SERVIDOR", "JUNTADA DE GUIA DE RECOLHIMENTO - CARTA DE GUIA", "Servidor Exemplo", "Analista Judiciário")]
+
+
+def movimentacoes(r):
+    linhas = []
+    n = len(MOVS)
+    for k, (gr, tit, quem, cargo) in enumerate(MOVS):
+        idv = "mov1Grau\n," + ",".join("\n" + g for g in gr.split(",")) + ",\n,\n"
+        cls = "even" if k % 2 == 0 else "odd"
+        linhas.append(f"""<tr class="{cls}" id="{idv}" ><td></td><td align="center">{n - k}</td><td align="center">{(k % 27) + 1:02d}/10/2026 10:00:00</td>
+<td><b><div title="Não é possível movimentar o processo">{ESC(tit)}</div></b><br>Descrição fictícia do evento {n - k}</td><td></td>
+<td>{ESC(quem)}<br><font size="1"><b>{ESC(cargo)}</b></font></td></tr>
+<tr id="rowmovimentacoes{k}" class="{cls}" style="display:none"><td colspan="5"><div class="extendedinfo">Carregando...</div></td></tr>""")
+    return (f'<div>Total de registros nesta página: {n}</div><table class="resultTable" cellpadding="0" cellspacing="0" width="100%">'
+            '<thead><tr><th>&nbsp;</th><th>Seq.</th><th>Data</th><th>Evento</th><th>Ações Auto.</th><th>Movimentado Por</th></tr></thead><tbody>' +
+            "".join(linhas) + "</tbody></table>")
+
+
 def aba_conteudo(r, aba):
     if aba == "tabInformacoesGerais":
         return _linhas([("Comarca/Subseção", "%s - %s" % (r.get("tribunal") or "TJMS", r.get("comarca") or "")), ("Autuação", "05/10/2020 às 00:00:00"),
@@ -189,6 +221,8 @@ def aba_conteudo(r, aba):
                 ESC(i.get("motivo") or ""), ESC(i.get("data") or ""), ESC(i.get("processos") or "")))
         return _grade(len(inc), ["Nº do Incidente", "Tipo do Incidente", "Complemento", "Data de Referência", "Data de Autuação", "Petição",
                                  "Data de Decisão", "Juiz", "Situação"], linhas)
+    if aba == "tabMovimentacoesProcesso":
+        return movimentacoes(r)
     return '<p style="color:#777">Nenhum registro encontrado.</p>'
 
 

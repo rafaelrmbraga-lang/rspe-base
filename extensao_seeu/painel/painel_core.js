@@ -79,8 +79,15 @@
     const p = res.painel || {};
     // pena, regime e marcos ficam no SEEU (capa e chips abaixo do nº do processo): aqui, só o aviso da execução, se houver
     const av = (p.pena || {}).aviso;
-    let h = topo(p, res) + (av ? `<p class="aviso-exec solto">${esc(av)}</p>` : "");
+    const al = p.especial;
+    // medida sem condenação (ANPP, transação, sursis processual): sem ficha, pena, marcos e benefícios - um cartão diz o que é
+    let h = al ? `<div class="fonte" role="note"><span>${esc(al.nome)} · referência ${esc(p.hoje || "")}</span></div>` +
+      `<div class="esp"><b>${esc(al.nome)}</b><p>Sem condenação: não há pena, regime nem benefícios da execução a calcular. ` +
+      `O cumprimento das condições é acompanhado na aba "Medidas Diversas da Prisão" do SEEU.</p>` +
+      `<small>${esc(al.assunto)} · ${esc(al.fundamento)}</small></div>`
+      : topo(p, res) + (av ? `<p class="aviso-exec solto">${esc(av)}</p>` : "");
     const A = p.alertas || [];
+    if (al && !A.length) return h + `<h2 id="s-al" class="h-al vh">Para conferir</h2>`;
     h += `<section aria-labelledby="s-al"><h2 id="s-al" class="h-al">Para conferir${A.length ? ` <span class="cnt">${A.length}</span>` : ""}</h2>` +
       (A.length ? `<ul class="alertas">${A.map((a, i) => alerta(a, i)).join("")}</ul>` : `<p class="vazio">${ICO.verde} Nada para conferir.</p>`) + `</section>`;
     if ((p.confere || []).length) {
@@ -160,8 +167,8 @@
   const CROT = { db: "Data-base", prog: "Progressão", liv: "Livramento", term: "Término" };
   function dadosChips(res) {
     const p = (res && res.painel) || {};
-    return { processo: p.processo || "", nome: p.nome || "", regime: p.regime || (p.pena || {}).regime || "", conferir: (p.contagem || {}).amarelo || 0,
-      icones: (p.icones || []).map((x) => ({ tipo: x.tipo, rotulo: x.rotulo, estado: x.estado, alvo: x.alvo })),
+    return { processo: p.processo || "", nome: p.nome || "", regime: p.regime || (p.pena || {}).regime || "", especial: !!p.especial, conferir: (p.contagem || {}).amarelo || 0,
+      icones: (p.icones || []).map((x) => ({ tipo: x.tipo, rotulo: x.rotulo, estado: x.estado, alvo: x.alvo, itens: x.itens || null })),
       marcos: (p.marcos || []).map((m) => ({ id: m.id, rotulo: m.rotulo, data: m.data, quando: m.quando, destaque: m.destaque, alerta: m.alerta,
         detalhe: [m.extra, ...(m.conta || [])].filter(Boolean) })) };
   }
@@ -180,25 +187,55 @@
     const det = (d.marcos || []).filter((m) => m.data && m.data !== "—").map((m, i) =>
       `<div class="det" data-det="${i}" hidden><b>${esc(m.rotulo)}</b> · ${esc(m.data)}${m.quando ? " · " + esc(m.quando) : ""}` +
       `${(m.detalhe || []).length ? "<br>" + m.detalhe.map(esc).join(" · ") : ""}</div>`).join("");
-    const id = fixa ? `<span class="id"><span class="num">${esc(d.processo)}</span>` +
-      `<button type="button" class="cp" data-copiar="processo" aria-label="Copiar o número do processo">${CICO.copiar}<span>Nº</span></button>` +
-      `<span class="nm" title="${esc(d.nome)}">${esc(d.nome)}</span>` +
-      `<button type="button" class="cp" data-copiar="nome" aria-label="Copiar o nome do assistido">${CICO.copiar}<span>Nome</span></button></span>` :
-      `<span class="id"><button type="button" class="cp" data-copiar="processo" aria-label="Copiar o número do processo">${CICO.copiar}<span>Nº</span></button>` +
-      `<button type="button" class="cp" data-copiar="nome" aria-label="Copiar o nome do assistido">${CICO.copiar}<span>Nome</span></button></span>`;
-    // na barra fixa, o nº e o nome vêm primeiro (é o que se copia); abaixo do nº no SEEU, as datas primeiro e o copiar no fim
+    // nº e nome (só na barra fixa; abaixo do nº, o SEEU já mostra os dois): o próprio texto é o botão de copiar
+    const id = fixa ? `<span class="id"><button type="button" class="txt num" data-copiar="processo" title="Clique para copiar o número" aria-label="${esc(d.processo)}: copiar o número do processo">${esc(d.processo)}</button>` +
+      `<button type="button" class="txt nm" data-copiar="nome" title="Clique para copiar o nome" aria-label="${esc(d.nome)}: copiar o nome do assistido">${esc(d.nome)}</button>` +
+      `<span class="ok-cp" role="status" aria-live="polite"></span></span>` : "";
     // benefícios: ícone + nome; verde = cabe, âmbar = a conferir (o nome do estado vai para o leitor de tela); o clique abre o cartão no painel
-    const bens = (d.icones || []).filter((x) => BICO[x.tipo]).map((x) =>
-      `<button type="button" class="ben ${x.estado === "ok" ? "ok" : "q"}" data-focar="${esc(x.alvo)}" aria-label="${esc(x.rotulo)}: ${x.estado === "ok" ? "cabe" : "a conferir"}. Ver no painel">` +
-      `${BICO[x.tipo]}<span>${esc(x.rotulo)}</span></button>`).join("");
-    const faixa = `<span class="seg">${reg ? `<span class="sg reg"><span class="rot">Regime</span><span class="dt">${esc(reg)}</span></span>` : ""}${seg}</span>` +
+    // saída temporária e progressão antecipada: ao passar o mouse (ou com o foco do teclado), o checklist dos requisitos
+    const MARCA = { true: ["ok", "✓", "atendido"], false: ["x", "✗", "não atendido"], null: ["q", "?", "a conferir"] };
+    const bens = (d.icones || []).filter((x) => BICO[x.tipo]).map((x, i) => {
+      const lista = (x.itens || []).length ? `<span class="pop" role="tooltip" id="req-${fixa ? "f" : "l"}${i}"><b>${esc(x.rotulo)}: requisitos</b>` +
+        x.itens.map((r) => { const [c, g, t] = MARCA[r.ok === true ? "true" : r.ok === false ? "false" : "null"];
+          return `<span class="ri ${c}"><i aria-hidden="true">${g}</i><span>${esc(r.txt)}<span class="vh"> (${t})</span></span></span>`; }).join("") +
+        `<small>Clique para ver no painel.</small></span>` : "";
+      return `<span class="benw"><button type="button" class="ben ${x.estado === "ok" ? "ok" : "q"}" data-focar="${esc(x.alvo)}"` +
+        `${lista ? ` aria-describedby="req-${fixa ? "f" : "l"}${i}"` : ""} aria-label="${esc(x.rotulo)}: ${x.estado === "ok" ? "cabe" : "a conferir"}. Ver no painel">` +
+        `${BICO[x.tipo]}<span>${esc(x.rotulo)}</span></button>${lista}</span>`;
+    }).join("");
+    const faixa = `<span class="seg">${reg ? `<span class="sg reg"><span class="rot">${d.especial ? "Medida" : "Regime"}</span><span class="dt">${esc(reg)}</span></span>` : ""}${seg}</span>` +
       (bens ? `<span class="bens" role="group" aria-label="Benefícios">${bens}</span>` : "") +
       (d.conferir ? `<button type="button" class="conf" data-abrir="1" aria-label="Abrir o painel: ${d.conferir} ${d.conferir === 1 ? "ponto" : "pontos"} para conferir">` +
         `<b aria-hidden="true">!</b>${d.conferir} conferir</button>` : "");
     return `<div class="faixa${fixa ? " fixa" : ""}" role="group" aria-label="Marcos do APTO">${fixa ? id + faixa : faixa + id}</div>${det}`;
   }
 
-  const api = { esc, html, resumo, fundamento, chips, dadosChips, ICO };
+  // ---------- destaques das movimentações (aba Movimentações do SEEU): pelo CONTEÚDO do evento, não só por quem movimentou.
+  // Entrada: os grupos que o SEEU põe no id da linha (JUIZ, SERVIDOR, PROMOTOR, DEFENSOR, ADVOGADO, OUTROS, AUDIENCIA, SEMARQUIVO,
+  // HABILITACAOPROV, INVALIDO), o título do evento e o cargo de quem movimentou. Saída: a categoria.
+  const ROTINA = /^(RECEBID[OA]S? OS AUTOS|CONFIRMADA A INTIMA|LEITURA DE REMESSA|REMETID[OA]S? OS AUTOS|CONCLUSOS|ATO ORDINAT|JUNTADA DE CI[ÊE]NCIA|DECORRIDO PRAZO|JUNTADA DE CERTID|RETIFICAD|REDISTRIBU|EXPEDI[ÇC][ÃA]O DE CERTID|EXPEDID[OA] (CERTID|OF[ÍI]CIO|INTIMA)|JUNTADA DE RELAT[ÓO]RIO D[AE] SITUA|PUBLICAD|ARQUIVAD|DESARQUIVAD|AUTUAD|DISTRIBU[ÍI]D|CANCELAD|ALTERAD|EVOLU[ÍI]DA A CLASSE|EXPEDI[ÇC][ÃA]O DE INTIMA|JUNTADA DE AR\b|RECEBIDO O|MERO EXPEDIENTE DE SECRETARIA)/;
+  const DECISAO = /(DECIS|SENTEN|CONCEDID|DEFERID|INDEFERID|HOMOLOG|EXTINT|UNIFICAD|REGRESS|REVOGAD|SUSPENS|PROGRESS|DECLARAD|RECONHECID|DETERMINAD|INDULTO|COMUTA|REMI[ÇC][ÃA]O|LIVRAMENTO|ALVAR[ÁA]|MANDADO|PRISÃO|SOLTURA|MONITORA)/;
+  const UNIDADE = /(DEPEN|AGEPEN|SEAP|ESTABELECIMENTO PENAL|PRES[ÍI]DIO|PENITENCI|UNIDADE PRISIONAL|ATESTADO|\bPAD\b|CONDUTA CARCER|FICHA DISCIPLINAR|CENTRAL DE ALVAR|COMUNICA[ÇC][ÃA]O DE (FUGA|EVAS|RECAPTURA|PRIS)|FUGA|EVAS[ÃA]O|RECAPTURA)/;
+  function classificarMov(grupos, titulo, cargo) {
+    const g = new Set((grupos || []).map((x) => String(x).toUpperCase()));
+    const t = String(titulo || "").toUpperCase().normalize("NFC");
+    const c = String(cargo || "");
+    if (g.has("INVALIDO")) return "rotina";
+    if (/^(RETIFICAD|CONCLUSOS)/.test(t)) return "rotina";   // mesmo lançado pelo gabinete
+    if (g.has("AUDIENCIA") || /AUDI[ÊE]NCIA/.test(t)) return "audiencia";
+    if (g.has("JUIZ") || /^Magistrad|^Assessor/i.test(c)) return /DESPACHO|MERO EXPEDIENTE/.test(t) && !DECISAO.test(t.replace(/MERO EXPEDIENTE/, "")) ? "despacho" : "decisao";
+    if (ROTINA.test(t)) return "rotina";
+    if (g.has("PROMOTOR") || /Minist[ée]rio P[úu]blico/i.test(c)) return "mp";
+    if (g.has("DEFENSOR") || /^Defensor/i.test(c)) return "defensoria";
+    if (/Depen|Seap|Agepen/i.test(c) || UNIDADE.test(t)) return "unidade";
+    if (g.has("ADVOGADO") || g.has("PROCURADOR")) return "parte";
+    if (/^JUNTADA DE PETI[ÇC][ÃA]O/.test(t)) return "parte";
+    return "outro";
+  }
+  const CAT_MOV = [["decisao", "Decisões"], ["despacho", "Despachos"], ["mp", "MP"], ["defensoria", "Defensoria"], ["unidade", "Unidade prisional"],
+    ["audiencia", "Audiências"], ["parte", "Partes e advogados"], ["outro", "Outros"], ["rotina", "Rotina do cartório"]];
+
+  const api = { esc, html, resumo, fundamento, chips, dadosChips, classificarMov, CAT_MOV, ICO };
   if (typeof module === "object" && module.exports) module.exports = api;
   else raiz.APTO_PAINEL_CORE = api;
 })(typeof self !== "undefined" ? self : this);
