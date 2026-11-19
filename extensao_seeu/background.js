@@ -569,6 +569,8 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
       }
       if (doSiapenMsg && msg.tipo === "fichaPdf") {
         if (!msg.lote && !msg.forcar && (await cfg()).fichaAuto === false) return responder({ ok: false, motivo: "ficha automática desligada" });
+        // painel no SEEU (1.15): a ficha aberta também vale para o painel, só nesta sessão do navegador (em segundo plano)
+        if ((await cfg()).painel !== false && self.APTO_PAINEL && msg.b64) self.APTO_PAINEL.fichaDoSiapen(msg.b64, msg.nome).catch(() => {});
         return responder(await gravarFicha(msg, sender));
       }
       if (msg.tipo === "cfg") return responder(await cfg());

@@ -15,9 +15,23 @@
     return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  function topo(p) {
-    return `<div class="fonte" role="note"><span>Regras do APTO sobre os dados das abas do SEEU · referência ${esc(p.hoje || "")}</span>` +
-      (p.ficha ? "" : `<span class="chip">${ICO.amarelo}Ficha disciplinar não lida: o que depende dela fica para conferir</span>`) + `</div>`;
+  // origem dos dados e a ficha disciplinar: carregar (botão ou arrastar o PDF), ou a lida (data, trocar, retirar)
+  function topo(p, res) {
+    const fi = p.ficha_info;
+    const carregada = res && res.fichaCarregada;
+    let fic;
+    if (p.ficha && fi) {
+      const quando = fi.impressa ? `impressa em ${esc(fi.impressa)}${fi.dias == null ? "" : fi.dias <= 0 ? " (hoje)" : " (há " + fi.dias + (fi.dias === 1 ? " dia" : " dias") + ")"}` : "sem data de impressão";
+      fic = `<div class="ficha ${fi.velha ? "amarelo" : "verde"}">${fi.velha ? ICO.amarelo : ICO.verde}<span>Ficha do SIAPEN ${quando}` +
+        `<small>${carregada ? "carregada no painel" : "aberta no SIAPEN nesta sessão"}</small></span>` +
+        `<span class="ficha-acoes"><button type="button" class="lnk" data-acao="ficha-carregar">Trocar</button>` +
+        (carregada ? `<button type="button" class="lnk" data-acao="ficha-retirar">Retirar</button>` : "") + `</span></div>`;
+    } else {
+      fic = `<div class="ficha amarelo">${ICO.amarelo}<span>Ficha disciplinar não lida: o que depende dela fica para conferir` +
+        `<small>Arraste o PDF da ficha do SIAPEN para cá, ou abra a ficha no SIAPEN.</small></span>` +
+        `<span class="ficha-acoes"><button type="button" class="btn-f" data-acao="ficha-carregar">Carregar a ficha (PDF)</button></span></div>`;
+    }
+    return `<div class="fonte" role="note"><span>Regras do APTO sobre os dados das abas do SEEU · referência ${esc(p.hoje || "")}</span></div>` + fic;
   }
 
   function pena(p) {
@@ -59,7 +73,7 @@
 
   function corpo(res) {
     const p = res.painel || {};
-    let h = topo(p) + `<section class="pena" aria-label="Pena e marcos">${pena(p)}${marcos(p)}</section>`;
+    let h = topo(p, res) + `<section class="pena" aria-label="Pena e marcos">${pena(p)}${marcos(p)}</section>`;
     const A = p.alertas || [];
     h += `<section aria-labelledby="s-al"><h2 id="s-al" class="h-al">Para conferir${A.length ? ` <span class="cnt">${A.length}</span>` : ""}</h2>` +
       (A.length ? `<ul class="alertas">${A.map(alerta).join("")}</ul>` : `<p class="vazio">${ICO.verde} Nada para conferir.</p>`) + `</section>`;

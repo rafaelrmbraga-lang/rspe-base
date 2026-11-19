@@ -26,6 +26,21 @@ O SEEU não muda: o painel só reserva a sua largura na página, não clica, nã
 3. **Confere**, em linhas discretas: o que está verde nos benefícios (ex.: prescrição não aparente).
 4. Crimes em execução e, recolhidas, as hipóteses afastadas.
 
+## Ficha disciplinar
+
+- **Carregar:** botão "Carregar a ficha (PDF)" no painel, ou arrastar o PDF para ele. A ficha só é lida neste computador e
+  fica só na sessão do navegador ("Retirar" tira na hora).
+- **Automático:** a ficha aberta no SIAPEN nesta sessão (com a ficha automática ligada) também vale para o painel.
+- **Leitura:** caracteres pelo pdf.js (posição, tamanho e fonte, como o pdfplumber: `extensao_seeu/painel/pdf_chars.mjs`)
+  -> `rspe_pdf_paginas.py` -> **o mesmo leitor do APTO** (`rspe_ficha.extrair_paginas_pdf`). O texto da página sai pelas
+  mesmas funções do pdfplumber (`pdfplumber.utils.text`, licença MIT, copiadas sem alteração no pacote do motor).
+- **Identidade:** o motor só usa a ficha que for desta pessoa (nome e mãe, CPF, autos ou nascimento); senão o painel diz
+  "Ficha disciplinar não usada". Ficha impressa há mais de 90 dias: conferir a atual.
+- **Testes:** `paridade_ficha.py` (fichas sintéticas: pdf.js = pdfplumber) e `teste_ficha_painel.py` (15 casos com ficha:
+  mesmo painel que o APTO com a ficha vinculada na base; outra pessoa; homônimo; ficha velha).
+- **Validar com ficha real:** só há fichas sintéticas (`ferramentas/seeu_ficticio/ficha_pdf.py`); conferir com um PDF real
+  do SIAPEN (nomes trocados).
+
 ## Duas situações só
 
 | Situação | Quando |

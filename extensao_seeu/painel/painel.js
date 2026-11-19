@@ -6,7 +6,7 @@ const C = self.APTO_PAINEL_CORE;
 const processo = decodeURIComponent((location.hash.match(/p=([^&]+)/) || [])[1] || "");
 const $ = (id) => document.getElementById(id);
 const SEEU = "https://seeu.pje.jus.br";
-let atual = null, esperandoAbas = null;
+let atual = null, esperandoAbas = null, ultimasAbas = null;
 
 function avisarPagina(d) {
   try { parent.postMessage(d, SEEU); } catch (e) { /* segue */ }
@@ -50,7 +50,8 @@ async function analisar(forcar) {
     const primeira = !(await chrome.storage.session.get("painelMotorPronto")).painelMotorPronto;
     pintar({ estado: "carregando", primeira, etapa: "Lendo as abas do processo" });
     chrome.runtime.sendMessage({ tipo: "painelPreparar" }).catch(() => null);   // o motor carrega enquanto as abas chegam
-    const d = await pedirAbas();
+    const d = forcar === "ficha" && ultimasAbas ? { abas: ultimasAbas } : await pedirAbas();
+    if (d.abas) ultimasAbas = d.abas;
     if (!d.abas) return pintar({ estado: "sem_dados", motivo: d.erro ? "Não foi possível ler as abas: " + d.erro : "" });
     pintar(Object.assign({}, atual, { etapa: "Calculando com as regras do APTO" }));
     let res;
@@ -65,6 +66,49 @@ async function analisar(forcar) {
 }
 
 $("atualizar").addEventListener("click", () => analisar(true));
+
+// ---------- ficha disciplinar: carregar (botão ou arrastar) e retirar; a ficha só é lida neste computador
+function aviso(t) {
+  const el = $("toast");
+  el.textContent = t;
+  el.hidden = false;
+  clearTimeout(aviso._t);
+  aviso._t = setTimeout(() => { el.hidden = true; }, 4500);
+}
+async function enviarFicha(arq) {
+  if (!arq) return;
+  if (!/\.pdf$/i.test(arq.name) && arq.type !== "application/pdf") return aviso("Escolha o PDF da ficha disciplinar do SIAPEN.");
+  if (arq.size > 15 * 1024 * 1024) return aviso("PDF grande demais para uma ficha disciplinar.");
+  pintar({ estado: "carregando", etapa: "Lendo a ficha disciplinar" });
+  const bytes = new Uint8Array(await arq.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  const r = await chrome.runtime.sendMessage({ tipo: "painelFicha", processo, b64: btoa(bin), arquivo: arq.name }).catch(() => null);
+  if (!r || !r.ok) aviso("Ficha não lida: " + ((r && r.erro) || "a extensão não respondeu"));
+  else aviso("Ficha de " + (r.resumo.nome || "?") + (r.resumo.impressa ? ", impressa em " + r.resumo.impressa : "") + ", lida.");
+  analisar("ficha");
+}
+$("corpo").addEventListener("click", async (e) => {
+  const b = e.target.closest("[data-acao]");
+  if (!b) return;
+  if (b.dataset.acao === "ficha-carregar") $("arquivoFicha").click();
+  if (b.dataset.acao === "ficha-retirar") {
+    await chrome.runtime.sendMessage({ tipo: "painelFichaRetirar", processo }).catch(() => null);
+    aviso("Ficha retirada do painel.");
+    analisar("ficha");
+  }
+});
+$("arquivoFicha").addEventListener("change", (e) => { enviarFicha(e.target.files[0]); e.target.value = ""; });
+let arrastando = 0;
+document.addEventListener("dragenter", (e) => { if ([...(e.dataTransfer.types || [])].includes("Files")) { arrastando++; $("soltar").hidden = false; } });
+document.addEventListener("dragleave", () => { if (--arrastando <= 0) { arrastando = 0; $("soltar").hidden = true; } });
+document.addEventListener("dragover", (e) => { e.preventDefault(); });
+document.addEventListener("drop", (e) => {
+  e.preventDefault();
+  arrastando = 0;
+  $("soltar").hidden = true;
+  enviarFicha(e.dataTransfer.files && e.dataTransfer.files[0]);
+});
 $("recolher").addEventListener("click", () => avisarPagina({ apto: "recolher" }));
 $("copiar").addEventListener("click", async () => {
   if (!atual) return;

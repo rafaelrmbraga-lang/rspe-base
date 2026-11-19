@@ -68,6 +68,24 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     await f2.waitForSelector(".pena", { timeout: 30000 });
     ok(pedidos.length - n0 === 1, id + ": trocar de aba não deve refazer a leitura (" + (pedidos.length - n0 - 1) + " pedidos a mais)");
   }
+  // ficha disciplinar: carregar o PDF pelo botão do painel (a ficha é lida no navegador: pdf.js + o leitor do APTO)
+  {
+    const [id, c] = Object.entries(DADOS)[0];
+    await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=" + c.processo.replace(/\D/g, ""));
+    const f = await moldura();
+    await f.waitForSelector(".pena", { timeout: 60000 });
+    await f.setInputFiles("#arquivoFicha", c.ficha_pdf);
+    await f.waitForSelector(".ficha.verde", { timeout: 60000 });
+    const txt = (await f.textContent(".ficha")).replace(/\s+/g, " ");
+    console.log(id, "· ficha ·", txt.slice(0, 90));
+    const assin = await sw.evaluate(async (dig) => { const g = await chrome.storage.session.get("painel:" + dig); return g["painel:" + dig] && g["painel:" + dig].resultado.painel.assinatura; }, c.processo.replace(/\D/g, ""));
+    ok(c.esperado_ficha.ficha === true, id + ": a ficha gerada devia ser desta pessoa");
+    ok(assin === c.esperado_ficha.assinatura, id + ": com a ficha, assinatura da extensão diferente da do Python do APTO");
+    ok(/carregada no painel/.test(txt), id + ": origem da ficha dita");
+    await pg.screenshot({ path: path.join(SAIDA, "painel_ficha.png") });
+    await f.click('[data-acao="ficha-retirar"]');
+    await f.waitForSelector(".ficha.amarelo", { timeout: 60000 });
+  }
   ok(ctx.pages().length === abasAntes, "nenhuma aba nova aberta (" + ctx.pages().length + " x " + abasAntes + ")");
   const f = await moldura();
   await f.click("#recolher");

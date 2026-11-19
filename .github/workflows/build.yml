@@ -41,6 +41,7 @@ jobs:
           python ferramentas/motor_extensao/empacotar.py
           python ferramentas/motor_extensao/paridade_cpython.py paridade.json
           node ferramentas/motor_extensao/paridade_pyodide.mjs paridade.json
+          python ferramentas/motor_extensao/paridade_ficha.py
 
       - name: Compilar com PyInstaller
         run: >

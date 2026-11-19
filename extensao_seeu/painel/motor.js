@@ -22,14 +22,16 @@ export function carregar() {
       for (const [nome, esperado] of Object.entries(info.arquivos)) {
         const buf = await (await fetch(url("motor/py/" + nome))).arrayBuffer();
         if ((await sha256(buf)) !== esperado) throw new Error("motor recusado: " + nome + " não confere com o motor.json");
+        const dir = ("/motor/" + nome).replace(/\/[^/]*$/, "");
+        py.FS.mkdirTree(dir);
         py.FS.writeFile("/motor/" + nome, new Uint8Array(buf));
       }
       py.runPython(`import sys
 sys.path.insert(0, "/motor")
 import rspe_motor, rspe_painel
 rspe_motor.VERSAO = ${JSON.stringify(info.versao)}`);
-      const analisar = py.globals.get("rspe_painel").analisar_abas;
-      return { py, info, analisar, carga: Math.round(performance.now() - t0) };
+      const rp = py.globals.get("rspe_painel");
+      return { py, info, analisar: rp.analisar_abas, lerFicha: rp.ler_ficha, carga: Math.round(performance.now() - t0) };
     })().catch((e) => { pronto = null; throw e; });
   }
   return pronto;
@@ -42,4 +44,19 @@ export async function analisar(texto) {
   const painel = m.analisar(String(texto));
   return { ok: true, painel, info: { versao: m.info.versao, base_juridica: m.info.base_juridica, pyodide: m.info.pyodide }, carga: m.carga,
     ms: Math.round(performance.now() - t) };
+}
+
+// ficha disciplinar do SIAPEN (PDF): os caracteres pelo pdf.js (posição e fonte, como o pdfplumber) e o MESMO leitor do APTO
+let pdfjs = null;
+export async function lerFicha(bytes, arquivo) {
+  const m = await carregar();
+  if (!pdfjs) {
+    pdfjs = await import(url("pdfjs/pdf.min.mjs"));
+    pdfjs.GlobalWorkerOptions.workerSrc = url("pdfjs/pdf.worker.min.mjs");
+  }
+  const { caracteres } = await import(url("painel/pdf_chars.mjs"));
+  let paginas;
+  try { paginas = await caracteres(pdfjs, bytes); } catch (e) { return { ok: false, erro: "o PDF não abriu (" + String((e && e.message) || e) + ")" }; }
+  const r = JSON.parse(m.lerFicha(JSON.stringify({ paginas, arquivo: arquivo || "ficha.pdf" })));
+  return r.erro ? { ok: false, erro: r.erro } : { ok: true, ficha: r.ficha, resumo: r.resumo };
 }

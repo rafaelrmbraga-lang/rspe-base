@@ -18,8 +18,15 @@ APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.32.0
   simulados derem o mesmo resultado no navegador e no Python do APTO.
   O SEEU não muda: o painel reserva a sua largura (nada fica coberto), não abre
   aba nem janela e recolhe numa lingueta. Liga e desliga no painel da extensão.
+  Ficha disciplinar no painel: botão "Carregar a ficha (PDF)" ou arrastar o
+  PDF; a ficha aberta no SIAPEN na mesma sessão também vale. Lida no navegador
+  pelo mesmo leitor do APTO (só neste computador, só na sessão); só é usada se
+  for da mesma pessoa (nome e mãe, CPF, autos ou nascimento). Com ela, falta
+  grave, comportamento e trabalho deixam de ficar para conferir; ficha impressa
+  há mais de 90 dias: conferir a atual.
   Limite: a leitura foi construída sobre as capturas oficiais do SEEU (TJSP,
-  2026); o HTML real das abas ainda precisa ser conferido (docs/painel_seeu).
+  2026) e sobre fichas sintéticas; o HTML real das abas e uma ficha real do
+  SIAPEN ainda precisam ser conferidos (docs/painel_seeu).
   Motor do APTO em módulo próprio (rspe_motor.py), sem mudança de regra.
   Indulto: teste novo garante que as hipóteses de saídas temporárias só ficam
   "a conferir" quando o regime na data do decreto permitia as saídas.

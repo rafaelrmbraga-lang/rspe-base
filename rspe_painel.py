@@ -25,7 +25,8 @@ import rspe_view as rv
 
 VERSAO_PAINEL = 3
 SEM_ATESTADO_DIAS = 180
-PROXIMO_DIAS = 60         # marco a até 60 dias: destaque de "próximo"  # 6 meses sem remição decidida, custodiado: pedir atestado
+PROXIMO_DIAS = 60
+FICHA_VALIDADE_DIAS = 90   # ficha impressa há mais de 90 dias: conferir a atual (a mesma regra da aba Ficha do APTO)         # marco a até 60 dias: destaque de "próximo"  # 6 meses sem remição decidida, custodiado: pedir atestado
 
 CTX_VAZIO = {"baixas": {}, "fichas": {}, "manuais": {}, "ajustes": {}, "dmanuais": {}, "peds": {}, "hist_n": {}, "fixados": {},
              "homonimos": {}, "outras_cond": {}, "outros_procs": {}, "outras_exec": {}, "homon_det": {}}
@@ -103,7 +104,7 @@ def _quando(d_txt, hoje):
     return "faltam " + _extenso(n)
 
 
-def montar(r, m, hoje, faltou=None):
+def montar(r, m, hoje, faltou=None, fichas_n=0):
     """Painel a partir do registro (r) e do modelo do APTO (m, já em json_seguro). faltou: o que a leitura das abas não achou."""
     sem_ficha = _sem_ficha(m)
     reg = (m.get("regime") or "").strip()
@@ -208,6 +209,21 @@ def montar(r, m, hoje, faltou=None):
         demais.append(_item("aud%d" % i, False, a.get("titulo") or "", "", "", "conferir no cálculo do SEEU e nos autos",
                             _linhas(a.get("detalhe"), 4), a.get("fundamento") or ""))
 
+    # ficha disciplinar: a data de impressão (mais de 90 dias = conferir a atualizada) e a ficha oferecida que não é desta pessoa
+    fic = m.get("ficha") if isinstance(m.get("ficha"), dict) else {}
+    ficha_info = None
+    if not sem_ficha:
+        imp = rs.to_date(fic.get("data_impressao") or "")
+        dias = (hoje - imp).days if imp else None
+        ficha_info = {"nome": fic.get("nome") or "", "impressa": fic.get("data_impressao") or "", "dias": dias,
+                      "velha": dias is None or dias > FICHA_VALIDADE_DIAS}
+        if ficha_info["velha"]:
+            demais.append(_item("ficha_velha", False, "Ficha disciplinar desatualizada", fic.get("data_impressao") or "sem data",
+                                ("impressa há %s" % _extenso(dias)) if dias is not None else "sem a data de impressão",
+                                "imprimir a ficha atual no SIAPEN: lançamentos posteriores (faltas, trabalho) não estão nesta", [], ""))
+    elif fichas_n:
+        demais.append(_item("ficha_outra", False, "Ficha disciplinar não usada", "", "a ficha carregada não confere com este assistido "
+                            "(nome, mãe, CPF ou data de nascimento)", "carregar a ficha deste assistido", [], ""))
     for f in faltou or []:
         demais.append(_item("faltou", False, "Não lido nas abas do SEEU", "", f, "conferir no SEEU: sem esse dado, o que depende dele fica a verificar"))
 
@@ -236,14 +252,14 @@ def montar(r, m, hoje, faltou=None):
     cont = {"verde": len(confere) + sum(1 for x in linhas if not x["alerta"]), "amarelo": len(alertas)}
     return {"processo": m.get("id") or r.get("processo_execucao") or "", "nome": m.get("nome") or r.get("nome") or "", "regime": reg,
             "hoje": rs.fmt(hoje), "pena": pena, "marcos": linhas, "alertas": alertas, "confere": confere, "crimes": crimes,
-            "nao_cabe": nao_cabe, "contagem": cont, "ficha": not sem_ficha}
+            "nao_cabe": nao_cabe, "contagem": cont, "ficha": not sem_ficha, "ficha_info": ficha_info}
 
 
 def _assinar(p):
     return hashlib.sha1(json.dumps(p, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 
 
-def analisar(r, sub=None, hoje=None, faltou=None):
+def analisar(r, sub=None, hoje=None, faltou=None, fichas_n=0):
     """Análise do painel: mesma entrada = mesmo resultado no APTO e na extensão. Devolve o painel com a versão do motor,
     a versão da base jurídica, a chave da entrada e a assinatura do resultado."""
     hoje = hoje or date.today()
@@ -254,20 +270,50 @@ def analisar(r, sub=None, hoje=None, faltou=None):
     chave = mt._chave_calculo(r, sub, hoje)
     m, _migrar = mt._montar_modelo(copy.deepcopy(r), copy.deepcopy(sub))  # o motor altera o que recebe: a entrada fica intacta
     m = rv.json_seguro({k: v for k, v in m.items() if k != "_bruto"})
-    p = montar(r, m, hoje, faltou)
+    p = montar(r, m, hoje, faltou, fichas_n)
     p["assinatura"] = _assinar(p)
     p.update({"chave": chave, "motor": mt.VERSAO, "painel": VERSAO_PAINEL, "base_juridica": rg.versao(), "base_digital": mt._bj_digital()})
     return p
 
 
+def contexto_fichas(fichas):
+    """Fatia do contexto com as fichas disciplinares oferecidas (carregadas no painel ou abertas no SIAPEN): cada uma pelo nome,
+    como o APTO guarda a ficha ainda sem processo; o motor só a usa se for desta pessoa (mesmo nome e mãe, CPF, autos ou
+    nascimento: rspe_motor._mesma_mae e _ficha_prova)."""
+    sub = copy.deepcopy(CTX_VAZIO)
+    for f in fichas or []:
+        if isinstance(f, dict) and f.get("nome"):
+            n = mt._norm(f["nome"])
+            sub["fichas"]["nome:" + n] = f
+            sub["homonimos"][n] = 1
+    return sub
+
+
 def analisar_abas(txt):
-    """Painel a partir das ABAS do SEEU (sem o APTO): {"abas": {nome: HTML}, "hoje": "dd/mm/aaaa"} em texto JSON -> painel em
-    texto JSON. As abas viram o registro no formato do RSPE pelo leitor do APTO (rspe_seeu_abas); o que não foi achado nas
-    abas vai em "faltou" e entra como ponto a conferir."""
+    """Painel a partir das ABAS do SEEU (sem o APTO): {"abas": {nome: HTML}, "hoje": "dd/mm/aaaa", "fichas": [ficha, ...]} em
+    texto JSON -> painel em texto JSON. As abas viram o registro no formato do RSPE pelo leitor do APTO (rspe_seeu_abas); o que
+    não foi achado nas abas vai em "faltou" e entra como ponto a conferir; as fichas oferecidas entram pelo contexto."""
     import rspe_seeu_abas as ra
     e = json.loads(txt)
     hoje = rs.to_date(e.get("hoje") or "") or date.today()
     r, faltou = ra.ler(e.get("abas") or {}, rs.fmt(hoje))
     if not r.get("processo_execucao"):
         return json.dumps({"erro": "sem_dados", "faltou": faltou}, ensure_ascii=False)
-    return json.dumps(analisar(r, None, hoje, faltou), ensure_ascii=False)
+    fichas = [f for f in e.get("fichas") or [] if isinstance(f, dict)]
+    return json.dumps(analisar(r, contexto_fichas(fichas), hoje, faltou, len(fichas)), ensure_ascii=False)
+
+
+def ler_ficha(txt):
+    """Ficha disciplinar do SIAPEN a partir dos caracteres que o pdf.js extraiu no navegador ({"paginas": [...], "arquivo"}):
+    o MESMO leitor do APTO (rspe_ficha.extrair_paginas_pdf), sobre páginas no formato do pdfplumber (rspe_pdf_paginas).
+    -> {"ficha": {...}, "resumo": {nome, mae, cpf, impressa}} ou {"erro": motivo}."""
+    import rspe_ficha as rf
+    import rspe_pdf_paginas as pp
+    e = json.loads(txt)
+    try:
+        f = rf.extrair_paginas_pdf(pp.paginas(e.get("paginas")), e.get("arquivo") or "ficha.pdf")
+    except ValueError as x:
+        return json.dumps({"erro": str(x)}, ensure_ascii=False)
+    return json.dumps({"ficha": rv.json_seguro(f), "resumo": {"nome": f.get("nome") or "", "mae": f.get("nome_mae") or "",
+                                                              "cpf": f.get("cpf") or "", "impressa": f.get("data_impressao") or ""}},
+                      ensure_ascii=False)

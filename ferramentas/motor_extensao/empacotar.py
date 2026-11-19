@@ -16,15 +16,19 @@ import urllib.request
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DESTINO = os.path.join(RAIZ, "extensao_seeu", "motor")
 # os módulos que o painel usa (rspe_painel importa rspe_motor, que importa os demais; alguns entram por import tardio)
-MODULOS = ["rspe_painel", "rspe_seeu_abas", "rspe_motor", "rspe_scraper", "rspe_view", "rspe_ficha", "rspe_regras", "rspe_decretos", "rspe_prescricao",
+MODULOS = ["rspe_painel", "rspe_seeu_abas", "rspe_pdf_paginas", "rspe_motor", "rspe_scraper", "rspe_view", "rspe_ficha", "rspe_regras", "rspe_decretos", "rspe_prescricao",
            "rspe_auditoria", "rspe_reincidencia", "rspe_remicao", "rspe_calc", "rspe_indulto_tl"]
 DADOS = ["base_juridica.json"]
 PYODIDE_VERSAO = "0.27.7"  # Python 3.12.7, o mesmo 3.12 da compilação do APTO (.github/workflows/build.yml)
 PYODIDE_TGZ = "https://registry.npmjs.org/pyodide/-/pyodide-%s.tgz" % PYODIDE_VERSAO
 PYODIDE_SHA256 = "89d5d952675eb08e11286e52c7238f1248ce71726e896db9703e73bef23dc343"  # sha256 do .tgz do npm (conferido ao baixar)
 PYODIDE_ARQS = ["pyodide.mjs", "pyodide.asm.js", "pyodide.asm.wasm", "python_stdlib.zip", "pyodide-lock.json", "package.json"]
-# a leitura de PDF não entra no painel: o motor só importa o pdfplumber (usado para ler arquivos, nunca no cálculo)
-STUB_PDFPLUMBER = '"""Substituto do pdfplumber no painel do SEEU: o motor não lê PDF (a leitura é do APTO)."""\n\n\ndef open(*a, **k):\n    raise RuntimeError("leitura de PDF indisponível no painel")\n'
+# pdfplumber no painel: só a montagem do texto a partir dos caracteres (pdfplumber.utils.text e o que ele usa, Python puro,
+# licença MIT), copiada SEM alteração do pdfplumber instalado com o APTO; os caracteres vêm do pdf.js (rspe_pdf_paginas).
+# A abertura de arquivo (pdfplumber.open, que precisa do pdfminer) fica de fora.
+STUB_PDFPLUMBER = '"""pdfplumber no painel do SEEU: só pdfplumber.utils.text (copiado do pdfplumber do APTO); os caracteres vêm do pdf.js."""\n\n\ndef open(*a, **k):\n    raise RuntimeError("abertura de PDF indisponível no painel: os caracteres vêm do pdf.js")\n'
+STUB_UTILS = '"""Só o que pdfplumber.utils.text usa (sem pdfinternals, que precisa do pdfminer)."""\n'
+PDFPLUMBER_COPIA = ["_typing.py", "utils/text.py", "utils/clustering.py", "utils/generic.py", "utils/geometry.py", "../pdfplumber-*.dist-info/licenses/LICENSE.txt"]
 
 
 def sha(caminho):
@@ -40,6 +44,31 @@ def versao_apto():
         return re.search(r'^VERSAO = "([^"]+)"', f.read(), re.M).group(1)
 
 
+def montar_pdfplumber(destino):
+    """destino/pdfplumber: o pacote mínimo do painel. Devolve {caminho relativo: sha256}."""
+    import glob
+    import pdfplumber as _p
+    orig = os.path.dirname(_p.__file__)
+    base = os.path.join(destino, "pdfplumber")
+    os.makedirs(os.path.join(base, "utils"), exist_ok=True)
+    out = {}
+    with open(os.path.join(base, "__init__.py"), "w", encoding="utf-8") as f:
+        f.write(STUB_PDFPLUMBER)
+    with open(os.path.join(base, "utils", "__init__.py"), "w", encoding="utf-8") as f:
+        f.write(STUB_UTILS)
+    for rel in PDFPLUMBER_COPIA:
+        achados = glob.glob(os.path.join(orig, rel))
+        if not achados:
+            raise SystemExit("pdfplumber instalado sem %s: instale o requirements.txt" % rel)
+        nome = "LICENSE-pdfplumber.txt" if rel.endswith("LICENSE.txt") else rel
+        shutil.copyfile(achados[0], os.path.join(base, nome))
+    for raiz, _d, fs in os.walk(base):
+        for x in fs:
+            c = os.path.join(raiz, x)
+            out[os.path.relpath(c, destino).replace(os.sep, "/")] = sha(c)
+    return out
+
+
 def copiar_motor():
     py = os.path.join(DESTINO, "py")
     if os.path.isdir(py):
@@ -52,9 +81,8 @@ def copiar_motor():
     for d in DADOS:
         shutil.copyfile(os.path.join(RAIZ, d), os.path.join(py, d))
         arqs[d] = sha(os.path.join(py, d))
-    with open(os.path.join(py, "pdfplumber.py"), "w", encoding="utf-8") as f:
-        f.write(STUB_PDFPLUMBER)
-    arqs["pdfplumber.py"] = sha(os.path.join(py, "pdfplumber.py"))
+    for nome, sha_ in montar_pdfplumber(py).items():
+        arqs[nome] = sha_
     with open(os.path.join(RAIZ, "base_juridica.json"), encoding="utf-8") as f:
         bj = json.load(f).get("versao") or ""
     info = {"versao": versao_apto(), "base_juridica": bj, "pyodide": PYODIDE_VERSAO, "arquivos": arqs}

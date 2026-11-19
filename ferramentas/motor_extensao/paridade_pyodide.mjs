@@ -1,7 +1,7 @@
 // Paridade navegador x APTO, lado da extensão: carrega o Pyodide e os arquivos do motor DO PACOTE da extensão
 // (extensao_seeu/motor), lê as MESMAS abas de cada caso e compara a assinatura com a do CPython. Uma diferença = falha (o
 // build não segue). Uso: node ferramentas/motor_extensao/paridade_pyodide.mjs esperado.json
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -13,8 +13,11 @@ const t0 = Date.now();
 const py = await loadPyodide({ indexURL: join(MOTOR, "pyodide") + "/" });
 const t1 = Date.now();
 py.FS.mkdirTree("/motor");
-for (const a of readdirSync(join(MOTOR, "py"))) py.FS.writeFile("/motor/" + a, readFileSync(join(MOTOR, "py", a)));
 const info = JSON.parse(readFileSync(join(MOTOR, "motor.json"), "utf-8"));
+for (const a of Object.keys(info.arquivos)) {   // os arquivos do pacote, como a extensão os carrega (com subpastas)
+  py.FS.mkdirTree(("/motor/" + a).replace(/\/[^/]*$/, ""));
+  py.FS.writeFile("/motor/" + a, readFileSync(join(MOTOR, "py", a)));
+}
 if (esperado.motor !== info.versao) { console.log(`motor do pacote (${info.versao}) diferente do APTO (${esperado.motor}): rode empacotar.py`); process.exit(1); }
 py.runPython(`import sys; sys.path.insert(0, "/motor")
 import rspe_motor, rspe_painel

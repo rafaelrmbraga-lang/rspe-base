@@ -27,7 +27,11 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.15) - NÃO PRECISA DO APTO
  - A primeira análise depois de abrir o navegador leva alguns segundos (o
    motor é carregado uma vez); as seguintes, cerca de 1 segundo mais a
    leitura das abas.
- - Sem a ficha do SIAPEN, o que depende dela fica amarelo.
+ - Ficha disciplinar: "Carregar a ficha (PDF)" no painel, ou arraste o PDF
+   para ele; a ficha que você abrir no SIAPEN (com a ficha automática ligada)
+   também vale. Só é lida neste computador e só fica na sessão do navegador
+   ("Retirar" tira na hora). Só é usada se for da mesma pessoa. Sem ficha, o
+   que depende dela fica amarelo.
  - Liga e desliga no painel da extensão ("Mostrar o painel do APTO na página
    do processo").
  - Pasta motor: gerada na compilação (os mesmos .py do APTO e o Pyodide). Quem

@@ -31,6 +31,14 @@ ok(C.html({ estado: "sem_dados" }).includes("Não foi possível ler o processo")
 ok(C.html({ estado: "erro", motivo: "x <y>" }).includes("x &lt;y&gt;"), "erro escapado");
 const car = C.html({ estado: "carregando", primeira: true, etapa: "Lendo as abas do processo (2 de 8)" });
 ok(car.includes('aria-busy="true"') && car.includes("2 de 8") && car.includes("primeira vez"), "carregando: esqueleto com aria-busy e etapa");
+// ficha disciplinar: sem ficha, botão para carregar; com ficha, a data e Trocar/Retirar; ficha velha em amarelo
+ok(h.includes('data-acao="ficha-carregar"') && h.includes("Carregar a ficha (PDF)") && h.includes("Arraste o PDF"), "sem ficha: botão e arrastar");
+const comFicha = (velha, carregada) => C.html({ estado: "ok", fichaCarregada: carregada ? { resumo: {}, arquivo: "f.pdf" } : null,
+  painel: Object.assign({}, res.painel, { ficha: true, ficha_info: { nome: "Fulano", impressa: "10/10/2026", dias: velha ? 120 : 2, velha } }) });
+const hf = comFicha(false, true);
+ok(hf.includes('class="ficha verde"') && hf.includes("impressa em 10/10/2026 (há 2 dias)") && hf.includes("carregada no painel") && hf.includes('data-acao="ficha-retirar"'), "ficha carregada: data, trocar e retirar");
+ok(!comFicha(false, false).includes("ficha-retirar") && comFicha(false, false).includes("aberta no SIAPEN"), "ficha do SIAPEN: sem retirar, origem dita");
+ok(comFicha(true, true).includes('class="ficha amarelo"'), "ficha velha: amarelo");
 const t = C.resumo(res);
 ok(t.includes("MARCOS") && t.includes("[próximo]") && t.includes("PARA CONFERIR") && t.includes("Indulto 2025") && t.includes("NÃO CABE"), "resumo em texto");
 if (falhas.length) { console.log("FALHOU:\n  " + falhas.join("\n  ")); process.exit(1); }
