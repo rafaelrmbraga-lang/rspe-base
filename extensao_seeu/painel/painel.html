@@ -14,10 +14,14 @@
   <div class="soltar" id="soltar" hidden>Solte aqui o PDF da ficha disciplinar do SIAPEN<br><small style="font-weight:400">a ficha só é lida neste computador</small></div>
   <div class="toast" id="toast" role="status" hidden></div>
   <footer class="p-pe">
-    <button class="btn" id="copiar" type="button">Copiar resumo</button>
+    <button class="btn" id="resumo" type="button" title="Resumo da pena em linguagem simples, para entregar ao assistido">Resumo para o assistido</button>
+    <button class="btn" id="copiar" type="button">Copiar</button>
+    <button class="btn" id="resVoltar" type="button" hidden>Voltar</button>
+    <button class="btn pri" id="resPdf" type="button" hidden disabled>Baixar o PDF</button>
     <span class="leg" aria-hidden="true"><span class="selo-st verde" id="lg-v"></span><span class="selo-st amarelo" id="lg-a"></span></span>
   </footer>
 </aside>
 <script src="painel_core.js"></script>
+<script src="painel_resumo.js"></script>
 <script src="painel.js"></script>
 </body></html>

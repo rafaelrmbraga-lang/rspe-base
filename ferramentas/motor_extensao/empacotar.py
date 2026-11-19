@@ -17,8 +17,13 @@ RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 DESTINO = os.path.join(RAIZ, "extensao_seeu", "motor")
 # os módulos que o painel usa (rspe_painel importa rspe_motor, que importa os demais; alguns entram por import tardio)
 MODULOS = ["rspe_painel", "rspe_seeu_abas", "rspe_pdf_paginas", "rspe_motor", "rspe_scraper", "rspe_view", "rspe_ficha", "rspe_regras", "rspe_decretos", "rspe_prescricao",
-           "rspe_auditoria", "rspe_reincidencia", "rspe_remicao", "rspe_calc", "rspe_indulto_tl"]
-DADOS = ["base_juridica.json"]
+           "rspe_auditoria", "rspe_reincidencia", "rspe_remicao", "rspe_calc", "rspe_indulto_tl", "rspe_resumo", "rspe_relatorio"]
+DADOS = ["base_juridica.json", "logo_defensoria.png"]  # o logo vai no resumo para o assistido (o mesmo do APTO)
+# resumo para o assistido: o PDF sai do MESMO gerador do APTO (rspe_relatorio), com as fontes do APTO, o reportlab em Python
+# puro NA MESMA VERSÃO instalada com o APTO (PyPI, sha256 conferido) e o Pillow do próprio Pyodide (para o logo). Carregados
+# só quando o resumo é pedido (motor/extra).
+PILLOW = "pillow-10.2.0-cp312-cp312-pyodide_2024_0_wasm32.whl"
+PILLOW_URL = "https://cdn.jsdelivr.net/pyodide/v%s/full/%s"
 PYODIDE_VERSAO = "0.27.7"  # Python 3.12.7, o mesmo 3.12 da compilação do APTO (.github/workflows/build.yml)
 PYODIDE_TGZ = "https://registry.npmjs.org/pyodide/-/pyodide-%s.tgz" % PYODIDE_VERSAO
 PYODIDE_SHA256 = "89d5d952675eb08e11286e52c7238f1248ce71726e896db9703e73bef23dc343"  # sha256 do .tgz do npm (conferido ao baixar)
@@ -69,6 +74,36 @@ def montar_pdfplumber(destino):
     return out
 
 
+def baixar_extras():
+    """reportlab (Python puro, a versão instalada com o APTO) e Pillow (do Pyodide) para o resumo do assistido."""
+    import reportlab
+    ex = os.path.join(DESTINO, "extra")
+    os.makedirs(ex, exist_ok=True)
+    feitos = []
+    v = reportlab.Version
+    meta = json.loads(urllib.request.urlopen("https://pypi.org/pypi/reportlab/%s/json" % v, timeout=60).read())
+    roda = next((u for u in meta["urls"] if u["filename"].endswith("-py3-none-any.whl")), None)
+    if not roda:
+        raise SystemExit("reportlab %s sem a versão em Python puro no PyPI: o resumo do painel precisa dela" % v)
+    for f in os.listdir(ex):
+        if f.startswith("reportlab-") and f != roda["filename"]:
+            os.remove(os.path.join(ex, f))  # versão antiga
+    alvos = [(roda["filename"], roda["url"], roda["digests"]["sha256"])]
+    lock = json.load(open(os.path.join(DESTINO, "pyodide", "pyodide-lock.json"), encoding="utf-8"))["packages"]["pillow"]
+    alvos.append((PILLOW, PILLOW_URL % (PYODIDE_VERSAO, PILLOW), lock["sha256"]))
+    for nome, url, esperado in alvos:
+        c = os.path.join(ex, nome)
+        if os.path.exists(c) and sha(c) == esperado:
+            continue
+        dados = urllib.request.urlopen(url, timeout=120).read()
+        if hashlib.sha256(dados).hexdigest() != esperado:
+            raise SystemExit("%s baixado não confere com o sha256 esperado: recusado" % nome)
+        with open(c, "wb") as f:
+            f.write(dados)
+        feitos.append(nome)
+    return feitos
+
+
 def copiar_motor():
     py = os.path.join(DESTINO, "py")
     if os.path.isdir(py):
@@ -83,9 +118,19 @@ def copiar_motor():
         arqs[d] = sha(os.path.join(py, d))
     for nome, sha_ in montar_pdfplumber(py).items():
         arqs[nome] = sha_
+    os.makedirs(os.path.join(py, "fontes"))
+    for f in sorted(os.listdir(os.path.join(RAIZ, "fontes"))):
+        if f.endswith(".ttf") or f.startswith("LICENCA"):
+            shutil.copyfile(os.path.join(RAIZ, "fontes", f), os.path.join(py, "fontes", f))
+            arqs["fontes/" + f] = sha(os.path.join(py, "fontes", f))
     with open(os.path.join(RAIZ, "base_juridica.json"), encoding="utf-8") as f:
         bj = json.load(f).get("versao") or ""
-    info = {"versao": versao_apto(), "base_juridica": bj, "pyodide": PYODIDE_VERSAO, "arquivos": arqs}
+    extras = {}
+    ex = os.path.join(DESTINO, "extra")
+    if os.path.isdir(ex):
+        for f in sorted(os.listdir(ex)):
+            extras[f] = sha(os.path.join(ex, f))
+    info = {"versao": versao_apto(), "base_juridica": bj, "pyodide": PYODIDE_VERSAO, "arquivos": arqs, "extras": extras}
     with open(os.path.join(DESTINO, "motor.json"), "w", encoding="utf-8") as f:
         json.dump(info, f, ensure_ascii=False, indent=1, sort_keys=True)
     return info
@@ -108,7 +153,8 @@ def baixar_pyodide():
 
 
 if __name__ == "__main__":
-    info = copiar_motor()
-    print("motor %s (base jurídica %s): %d arquivos" % (info["versao"], info["base_juridica"], len(info["arquivos"])))
     if "--sem-pyodide" not in sys.argv:
         print("Pyodide %s %s" % (PYODIDE_VERSAO, "baixado" if baixar_pyodide() else "já presente"))
+        print("extras do resumo: %s" % (", ".join(baixar_extras()) or "já presentes"))
+    info = copiar_motor()
+    print("motor %s (base jurídica %s): %d arquivos, %d extras" % (info["versao"], info["base_juridica"], len(info["arquivos"]), len(info["extras"])))

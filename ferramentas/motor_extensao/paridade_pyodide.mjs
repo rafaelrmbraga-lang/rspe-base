@@ -34,7 +34,32 @@ for (const id of ids) {
     if (difs <= 5) console.log("DIFERENTE", id, e.assinatura, p.assinatura, e.chave === p.chave ? "(mesma entrada)" : "(entrada diferente)");
   }
 }
+// resumo para o assistido: os extras (reportlab, Pillow) como a extensão os carrega, e o MESMO PDF (bytes) que o APTO gerou
+let rdif = 0;
+const R = Object.entries(esperado.resumos || {});
+if (R.length) {
+  const { createHash } = await import("node:crypto");
+  for (const [nome, sha] of Object.entries(info.extras || {})) {
+    const buf = readFileSync(join(MOTOR, "extra", nome));
+    if (createHash("sha256").update(buf).digest("hex") !== sha) { console.log("extra fora do motor.json:", nome); process.exit(1); }
+    if (nome.startsWith("pillow-")) await py.loadPackage(join(MOTOR, "extra", nome));
+    else { py.FS.writeFile("/tmp/" + nome, new Uint8Array(buf)); py.runPython(`import zipfile; zipfile.ZipFile("/tmp/${nome}").extractall("/motor")`); }
+  }
+  py.runPython("import reportlab.rl_config as _c; _c.invariant = 1");
+  const rpy = py.globals.get("rspe_painel");
+  for (const [id, e] of R) {
+    // a análise do processo primeiro (o resumo parte dela), como na extensão
+    const caso = esperado.casos[id.replace(/_\d$/, "")];
+    analisar(caso.entrada);
+    const d = JSON.parse(rpy.resumo_assistido(JSON.stringify({ processo: e.processo })));
+    if (JSON.stringify(d) !== JSON.stringify(e.d)) { rdif++; console.log("RESUMO (texto) DIFERENTE", id); continue; }
+    const r = JSON.parse(rpy.resumo_pdf(JSON.stringify({ d: e.d, canhoto: e.canhoto })));
+    const sha = createHash("sha256").update(py.FS.readFile(r.caminho)).digest("hex");
+    if (sha !== e.sha) { rdif++; console.log("RESUMO (PDF) DIFERENTE", id); }
+  }
+  console.log(`resumo para o assistido: ${R.length - rdif}/${R.length} PDFs idênticos ao do APTO (com e sem o canhoto)`);
+}
 const versao = py.runPython("import sys; sys.version.split()[0]");
 console.log(`Pyodide ${info.pyodide} (Python ${versao}): ${ids.length - difs}/${ids.length} processos com o mesmo resultado do CPython` +
   ` · carga ${t1 - t0} ms, motor ${t2 - t1} ms, cálculo ${Date.now() - t2} ms (${Math.round((Date.now() - t2) / ids.length)} ms por processo)`);
-process.exit(difs ? 1 : 0);
+process.exit(difs || rdif ? 1 : 0);

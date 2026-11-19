@@ -28,6 +28,8 @@ self.APTO_PAINEL = (() => {
     }
     const m = await import(chrome.runtime.getURL("painel/motor.js"));
     if (tipo === "carregar") return m.carregar().then((x) => ({ ok: true, carga: x.carga, info: x.info }));
+    if (tipo === "resumo") return m.resumo(extra.processo);
+    if (tipo === "resumoPdf") return m.resumoPdf(extra.d, extra.canhoto);
     if (tipo === "ficha") {
       const bin = atob(extra.b64), bytes = new Uint8Array(bin.length);
       for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -109,6 +111,12 @@ self.APTO_PAINEL = (() => {
   async function mensagem(msg) {
     if (msg.tipo === "painelGuardado") return (await guardado(msg.processo)) || null;
     if (msg.tipo === "painelAnalisar") return analisar(msg.processo, msg.abas);
+    if (msg.tipo === "painelResumo") {
+      try { return await motor("resumo", "", { processo: digitos(msg.processo) }); } catch (e) { return { ok: false, erro: String(e) }; }
+    }
+    if (msg.tipo === "painelResumoPdf") {
+      try { return await motor("resumoPdf", "", { d: msg.d, canhoto: !!msg.canhoto }); } catch (e) { return { ok: false, erro: String(e) }; }
+    }
     if (msg.tipo === "painelFicha") return carregarFicha(msg.processo, msg.b64, msg.arquivo);
     if (msg.tipo === "painelFichaRetirar") return retirarFicha(msg.processo);
     if (msg.tipo === "painelPreparar") { try { return await motor("carregar"); } catch (e) { return { ok: false, erro: String(e) }; } }

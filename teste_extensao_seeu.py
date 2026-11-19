@@ -30,7 +30,7 @@ ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/se
 ok(m["content_scripts"][5]["js"] == ["sei_aba.js"], "SEI: endereço do Controle de Processos e o botão Ler o SEI do APTO")
 ok(m["content_scripts"][6]["js"] == ["seeu_aba.js"], "SEEU: o botão Ler a Mesa do APTO (abre a triagem)")
 ok(m.get("web_accessible_resources") == [{"resources": ["sei/lib/*.js"], "matches": ["https://sei.defensoria.ms.def.br/*"]},
-   {"resources": ["painel/painel.html", "painel/painel.css", "painel/painel.js", "painel/painel_core.js", "painel/*.ttf"], "matches": ["https://seeu.pje.jus.br/*"]}],
+   {"resources": ["painel/painel.html", "painel/painel.css", "painel/painel.js", "painel/painel_core.js", "painel/painel_resumo.js", "painel/*.ttf"], "matches": ["https://seeu.pje.jus.br/*"]}],
    "só o leitor do SEI, só para o SEI da Defensoria; só a página do painel, só para o SEEU (1.15)")
 ok(m["content_scripts"][7]["js"] == ["comum.js", "painel/painel_seeu.js"], "SEEU: o painel do APTO na página do processo (1.15)")
 ok("script-src 'self' 'wasm-unsafe-eval';" in m["content_security_policy"]["extension_pages"], "só o WebAssembly do motor a mais no CSP (sem eval)")

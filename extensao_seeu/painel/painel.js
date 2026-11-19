@@ -21,6 +21,7 @@ function pintar(res) {
   const ok = res && res.estado === "ok";
   const c = ok ? p.contagem : { verde: 0, amarelo: 0 };
   $("copiar").disabled = !ok;
+  $("resumo").disabled = !ok;
   $("lg-v").innerHTML = ok ? C.ICO.verde + " " + c.verde + " confere" : "";
   $("lg-a").innerHTML = ok ? C.ICO.amarelo + " " + c.amarelo + " conferir" : "";
   $("lg-v").hidden = $("lg-a").hidden = !ok;
@@ -113,8 +114,84 @@ $("recolher").addEventListener("click", () => avisarPagina({ apto: "recolher" })
 $("copiar").addEventListener("click", async () => {
   if (!atual) return;
   try { await navigator.clipboard.writeText(C.resumo(atual)); $("copiar").textContent = "Copiado"; } catch (e) { $("copiar").textContent = "Não copiou"; }
-  setTimeout(() => { $("copiar").textContent = "Copiar resumo"; }, 2000);
+  setTimeout(() => { $("copiar").textContent = "Copiar"; }, 2000);
 });
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") avisarPagina({ apto: "recolher" }); });
+
+// ---------- resumo para o assistido (o texto do APTO, conferido aqui; o PDF pelo mesmo gerador do APTO)
+const R = self.APTO_RESUMO;
+let res = null;   // o resumo em edição
+function modoResumo(on) {
+  ["resumo", "copiar"].forEach((id) => { $(id).hidden = on; });
+  ["resVoltar", "resPdf"].forEach((id) => { $(id).hidden = !on; });
+  $("lg-v").hidden = $("lg-a").hidden = on || !(atual && atual.estado === "ok");
+  $("atualizar").disabled = on;
+}
+function pintarResumo() {
+  $("corpo").innerHTML = R.tela(res);
+  $("corpo").setAttribute("aria-busy", "false");
+  $("resPdf").disabled = !res.onde;
+  $("resPdf").title = res.onde ? "" : "Escolha antes onde é o atendimento";
+}
+async function abrirResumo() {
+  modoResumo(true);
+  $("corpo").innerHTML = C.html({ estado: "carregando", etapa: "Montando o resumo para o assistido" });
+  let r = await chrome.runtime.sendMessage({ tipo: "painelResumo", processo }).catch(() => null);
+  if (r && !r.ok && r.erro === "sem_analise") {   // o motor foi reiniciado: refaz a análise e tenta de novo
+    modoResumo(false);
+    await analisar(true);
+    modoResumo(true);
+    r = await chrome.runtime.sendMessage({ tipo: "painelResumo", processo }).catch(() => null);
+  }
+  if (!r || !r.ok) { modoResumo(false); pintar(atual); return aviso("Resumo não montado: " + ((r && r.erro) || "a extensão não respondeu")); }
+  res = Object.assign(r.d, { onde: "" });   // onde é o atendimento: a pessoa escolhe sempre
+  pintarResumo();
+  $("corpo").scrollTop = 0;
+}
+$("resumo").addEventListener("click", abrirResumo);
+$("resVoltar").addEventListener("click", () => { res = null; modoResumo(false); pintar(atual); });
+$("corpo").addEventListener("change", (e) => {
+  if (!res) return;
+  const t = e.target;
+  if (t.name === "resOnde" || t.name === "resVs") { R.ler(res, $("corpo")); pintarResumo(); }
+  if (t.dataset && t.dataset.prov) { R.ler(res, $("corpo")); R.prov(res, t.dataset.prov, t.checked); pintarResumo(); }
+});
+$("corpo").addEventListener("click", (e) => {
+  const b = res && e.target.closest("[data-mais]");
+  if (!b) return;
+  R.ler(res, $("corpo"));
+  res.secoes[+b.dataset.mais].itens.push("");
+  pintarResumo();
+});
+$("resPdf").addEventListener("click", async () => {
+  if (!res) return;
+  R.ler(res, $("corpo"));
+  if (!res.onde) return aviso("Escolha onde é o atendimento.");
+  const b = $("resPdf");
+  b.disabled = true;
+  b.setAttribute("aria-busy", "true");
+  b.textContent = "Gerando o PDF…";
+  try {
+    const r = await chrome.runtime.sendMessage({ tipo: "painelResumoPdf", d: R.saida(res), canhoto: res.onde === "unidade" }).catch(() => null);
+    if (!r || !r.ok) return aviso("PDF não gerado: " + ((r && r.erro) || "a extensão não respondeu"));
+    const bin = atob(r.b64), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([bytes], { type: "application/pdf" }));
+    a.download = "Resumo - " + String(res.nome || "assistido").replace(/[\\/:*?"<>|]+/g, " ").trim() + ".pdf";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    aviso("Resumo salvo nos downloads" + (res.onde === "unidade" && !r.canhoto ? " (sem o canhoto: o texto não coube em uma folha com ele)" : "") +
+      (r.verso ? " · com o verso: imprima frente e verso" : "") + ".");
+  } finally {
+    b.disabled = false;
+    b.removeAttribute("aria-busy");
+    b.textContent = "Baixar o PDF";
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  if (res) { res = null; modoResumo(false); pintar(atual); } else avisarPagina({ apto: "recolher" });
+});
 $("proc").textContent = processo;
 analisar(false);

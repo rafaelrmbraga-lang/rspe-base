@@ -41,6 +41,20 @@ O SEEU não muda: o painel só reserva a sua largura na página, não clica, nã
 - **Validar com ficha real:** só há fichas sintéticas (`ferramentas/seeu_ficticio/ficha_pdf.py`); conferir com um PDF real
   do SIAPEN (nomes trocados).
 
+## Resumo para o assistido
+
+- Botão "Resumo para o assistido" no rodapé do painel: o texto em linguagem simples que o APTO propõe (`rspe_resumo.montar`,
+  a partir da última análise), conferido no próprio painel como na janela do APTO (frase a frase, "+ frase", providências,
+  verso de trabalho e estudo quando há ficha).
+- **Onde é o atendimento?** (escolha obrigatória antes do PDF): **na unidade prisional** - o resumo leva o canhoto para o
+  assistido pedir o próximo atendimento (com a data e a unidade); **fora da unidade** (Defensoria, fórum, telefone ou vídeo) -
+  sem o canhoto.
+- "Baixar o PDF": o MESMO gerador do APTO (`rspe_relatorio.relatorio_resumo_assistido`), com o reportlab em Python puro na
+  versão instalada com o APTO, o Pillow do Pyodide, as fontes e o logo do APTO; carregados só quando o resumo é pedido. Vai
+  para os downloads, sem abrir aba.
+- Sem a base do APTO, os pedidos já feitos não entram sozinhos: marque nas providências.
+- **Teste:** na compilação, os PDFs do resumo (com e sem canhoto) saem com os mesmos bytes no navegador e no APTO.
+
 ## Duas situações só
 
 | Situação | Quando |

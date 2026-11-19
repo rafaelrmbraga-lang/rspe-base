@@ -255,6 +255,9 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
             "nao_cabe": nao_cabe, "contagem": cont, "ficha": not sem_ficha, "ficha_info": ficha_info}
 
 
+_ULTIMO = {}  # processo (dígitos) -> (modelo do APTO, data de referência) da última análise nesta sessão do motor
+
+
 def _assinar(p):
     return hashlib.sha1(json.dumps(p, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()
 
@@ -268,8 +271,9 @@ def analisar(r, sub=None, hoje=None, faltou=None, fichas_n=0):
     sub = sub or copy.deepcopy(CTX_VAZIO)
     rv.HOJE = hoje
     chave = mt._chave_calculo(r, sub, hoje)
-    m, _migrar = mt._montar_modelo(copy.deepcopy(r), copy.deepcopy(sub))  # o motor altera o que recebe: a entrada fica intacta
-    m = rv.json_seguro({k: v for k, v in m.items() if k != "_bruto"})
+    m_bruto, _migrar = mt._montar_modelo(copy.deepcopy(r), copy.deepcopy(sub))  # o motor altera o que recebe: a entrada fica intacta
+    _ULTIMO[re.sub(r"\D", "", r.get("processo_execucao") or "")] = (m_bruto, hoje)  # para o resumo do assistido, sem recalcular
+    m = rv.json_seguro({k: v for k, v in m_bruto.items() if k != "_bruto"})
     p = montar(r, m, hoje, faltou, fichas_n)
     p["assinatura"] = _assinar(p)
     p.update({"chave": chave, "motor": mt.VERSAO, "painel": VERSAO_PAINEL, "base_juridica": rg.versao(), "base_digital": mt._bj_digital()})
@@ -317,3 +321,30 @@ def ler_ficha(txt):
     return json.dumps({"ficha": rv.json_seguro(f), "resumo": {"nome": f.get("nome") or "", "mae": f.get("nome_mae") or "",
                                                               "cpf": f.get("cpf") or "", "impressa": f.get("data_impressao") or ""}},
                       ensure_ascii=False)
+
+
+def resumo_assistido(txt):
+    """Resumo para o assistido (linguagem simples, CNJ), como a janela do APTO o propõe (rspe_resumo.montar), a partir da última
+    análise do processo nesta sessão: {"processo"} -> o texto proposto, para conferir e editar no painel. Sem a base do APTO, os
+    pedidos já feitos não entram (a pessoa marca as providências). A unidade vem da ficha disciplinar, se houver."""
+    import rspe_resumo as rres
+    e = json.loads(txt)
+    x = _ULTIMO.get(re.sub(r"\D", "", str(e.get("processo") or "")))
+    if not x:
+        return json.dumps({"erro": "sem_analise"})
+    m, hoje = x
+    d = rres.montar(m, {}, hoje, m.get("nome") or "")
+    d["unidade"] = ((m.get("ficha") or {}).get("unidade") or "").strip() if isinstance(m.get("ficha"), dict) else ""
+    return json.dumps(rv.json_seguro(d), ensure_ascii=False)
+
+
+def resumo_pdf(txt, caminho="/tmp/resumo_assistido.pdf"):
+    """PDF do resumo (o texto já conferido no painel), pelo MESMO gerador do APTO (rspe_relatorio.relatorio_resumo_assistido):
+    {"d": resumo, "canhoto": bool} -> {"caminho", "canhoto", "verso"}. O canhoto (pedido do próximo atendimento) só vai no
+    atendimento na unidade prisional - a pessoa escolhe no painel."""
+    import rspe_relatorio as rrel
+    e = json.loads(txt)
+    d = dict(e.get("d") or {})
+    d["canhoto"] = bool(e.get("canhoto"))
+    rrel.relatorio_resumo_assistido(d, caminho)
+    return json.dumps({"caminho": caminho, "canhoto": bool(d.get("_canhoto_saiu")), "verso": bool(d.get("_verso_saiu"))})

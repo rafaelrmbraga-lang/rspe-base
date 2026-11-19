@@ -30,9 +30,23 @@ def main():
         if p.get("erro"):
             raise SystemExit("%s: as abas não foram lidas (%s)" % (c["id"], p))
         out[c["id"]] = {"entrada": entrada, "assinatura": p["assinatura"], "chave": p["chave"]}
+    # resumo para o assistido: o texto proposto e o PDF (reportlab em modo invariante: mesmos bytes para a mesma entrada), com e
+    # sem o canhoto, em alguns casos; a extensão tem de gerar o MESMO PDF
+    import hashlib
+    import reportlab.rl_config as rlc
+    rlc.invariant = 1
+    resumos = {}
+    for c in casos[:12:3]:
+        rp.analisar_abas(json.dumps({"abas": seeu.abas_dict(c["rspe"]), "hoje": HOJE}, ensure_ascii=False))
+        d = json.loads(rp.resumo_assistido(json.dumps({"processo": c["processo"]})))
+        for canhoto in (True, False):
+            cam = os.path.join(os.path.dirname(os.path.abspath(sys.argv[1])), "resumo_%s_%d.pdf" % (c["id"], canhoto))
+            rp.resumo_pdf(json.dumps({"d": d, "canhoto": canhoto}, ensure_ascii=False), cam)
+            resumos["%s_%d" % (c["id"], canhoto)] = {"processo": c["processo"], "canhoto": canhoto, "d": d,
+                                                     "sha": hashlib.sha256(open(cam, "rb").read()).hexdigest()}
     with open(sys.argv[1], "w", encoding="utf-8") as f:
-        json.dump({"motor": rspe_motor.VERSAO, "casos": out}, f, ensure_ascii=False)
-    print("CPython %s: %d processos lidos pelas abas e calculados" % (sys.version.split()[0], len(out)))
+        json.dump({"motor": rspe_motor.VERSAO, "casos": out, "resumos": resumos}, f, ensure_ascii=False)
+    print("CPython %s: %d processos lidos pelas abas e calculados; %d resumos em PDF" % (sys.version.split()[0], len(out), len(resumos)))
 
 
 if __name__ == "__main__":

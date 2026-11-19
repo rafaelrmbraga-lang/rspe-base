@@ -153,6 +153,7 @@
         "painel/painel.css",
         "painel/painel.js",
         "painel/painel_core.js",
+        "painel/painel_resumo.js",
         "painel/*.ttf"
       ],
       "matches": [

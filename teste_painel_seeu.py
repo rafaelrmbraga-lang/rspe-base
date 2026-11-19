@@ -90,6 +90,24 @@ ok(p1["assinatura"] == p2["assinatura"], "analisar_abas = ler + analisar")
 # 7) a tela do painel (node), se houver node neste computador
 if shutil.which("node"):
     ok(subprocess.call(["node", os.path.join(AQUI, "extensao_seeu_testes", "teste_painel_core.js")]) == 0, "teste da tela do painel (node)")
+    ok(subprocess.call(["node", os.path.join(AQUI, "extensao_seeu_testes", "teste_painel_resumo.js")]) == 0, "teste do resumo para o assistido (node)")
+
+# 8) resumo para o assistido: parte da última análise; o canhoto só quando a pessoa diz que o atendimento é na unidade
+rp.analisar_abas(json.dumps({"abas": seeu.abas_dict(casos["S035"]["rspe"]), "hoje": "12/10/2026"}, ensure_ascii=False))
+d = json.loads(rp.resumo_assistido(json.dumps({"processo": casos["S035"]["processo"]})))
+ok(d.get("nome") and any(s_["id"] == "direitos" for s_ in d["secoes"]) and d.get("providencias"), "resumo montado a partir da análise")
+ok(json.loads(rp.resumo_assistido(json.dumps({"processo": "0000000-00.0000.0.00.0000"}))).get("erro") == "sem_analise", "sem análise: pedir de novo")
+try:
+    import tempfile
+    import pdfplumber
+    for canhoto in (True, False):
+        cam = os.path.join(tempfile.mkdtemp(), "r.pdf")
+        x = json.loads(rp.resumo_pdf(json.dumps({"d": d, "canhoto": canhoto}, ensure_ascii=False), cam))
+        with pdfplumber.open(cam) as pdf:
+            t = "\n".join(pg.extract_text() or "" for pg in pdf.pages)
+        ok(("Pedido de atendimento" in t) == canhoto and x["canhoto"] == canhoto, "resumo %s canhoto" % ("com" if canhoto else "sem"))
+except ImportError:
+    pass
 
 if falhas:
     print("FALHOU:\n  " + "\n  ".join(falhas))

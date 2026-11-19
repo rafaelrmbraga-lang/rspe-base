@@ -86,6 +86,32 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     await f.click('[data-acao="ficha-retirar"]');
     await f.waitForSelector(".ficha.amarelo", { timeout: 60000 });
   }
+  // resumo para o assistido: abre no painel, só baixa depois de escolher onde é o atendimento; fora da unidade = sem canhoto
+  {
+    const [id, c] = Object.entries(DADOS)[0];
+    const f = await moldura();
+    await f.waitForSelector("#resumo:not([disabled])", { timeout: 60000 });
+    await f.click("#resumo");
+    await f.waitForSelector(".res fieldset legend", { timeout: 90000 });
+    ok(await f.isDisabled("#resPdf"), id + ": sem escolher o local, o PDF não sai");
+    await pg.screenshot({ path: path.join(SAIDA, "painel_resumo.png") });
+    for (const [onde, canhoto] of [["fora", false], ["unidade", true]]) {
+      await f.check(`input[name=resOnde][value=${onde}]`);
+      await f.waitForSelector("#resPdf:not([disabled])");
+      const [dl] = await Promise.all([pg.waitForEvent("download", { timeout: 90000 }), f.click("#resPdf")]);
+      const destino = path.join(SAIDA, `resumo_${onde}.pdf`);
+      await dl.saveAs(destino);
+      const buf = fs.readFileSync(destino);
+      ok(buf.slice(0, 5).toString() === "%PDF-", id + ": resumo (" + onde + ") não é PDF");
+      console.log(id, "· resumo", onde, "·", buf.length, "bytes ·", dl.suggestedFilename());
+      ok(require("child_process").execFileSync("python3", ["-c", "import sys,pdfplumber;p=pdfplumber.open(sys.argv[1]);print('S' if 'Pedido de atendimento' in ''.join(x.extract_text() or '' for x in p.pages) else 'N')", destino]).toString().trim() === (canhoto ? "S" : "N"),
+        id + ": canhoto " + (canhoto ? "devia" : "não devia") + " sair (" + onde + ")");
+      if (onde === "unidade") await pg.screenshot({ path: path.join(SAIDA, "painel_resumo_unidade.png") });
+    }
+    ok(ctx.pages().length === abasAntes, id + ": baixar o resumo não abriu aba");
+    await f.click("#resVoltar");
+    await f.waitForSelector(".pena");
+  }
   ok(ctx.pages().length === abasAntes, "nenhuma aba nova aberta (" + ctx.pages().length + " x " + abasAntes + ")");
   const f = await moldura();
   await f.click("#recolher");

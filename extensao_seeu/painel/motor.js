@@ -60,3 +60,37 @@ export async function lerFicha(bytes, arquivo) {
   const r = JSON.parse(m.lerFicha(JSON.stringify({ paginas, arquivo: arquivo || "ficha.pdf" })));
   return r.erro ? { ok: false, erro: r.erro } : { ok: true, ficha: r.ficha, resumo: r.resumo };
 }
+
+// resumo para o assistido: o texto proposto (rspe_resumo, a partir da última análise do processo) e o PDF pelo MESMO gerador do
+// APTO (rspe_relatorio). O reportlab (Python puro, versão do APTO) e o Pillow (do Pyodide) só carregam quando o resumo é pedido.
+let extras = null;
+function prepararExtras(m) {
+  if (!extras) {
+    extras = (async () => {
+      for (const [nome, esperado] of Object.entries(m.info.extras || {})) {
+        const buf = await (await fetch(url("motor/extra/" + nome))).arrayBuffer();
+        if ((await sha256(buf)) !== esperado) throw new Error("resumo recusado: " + nome + " não confere com o motor.json");
+        if (nome.startsWith("pillow-")) await m.py.loadPackage(url("motor/extra/" + nome));
+        else {   // wheel em Python puro: extraído com o zipfile do próprio Python
+          m.py.FS.writeFile("/tmp/" + nome, new Uint8Array(buf));
+          m.py.runPython(`import zipfile; zipfile.ZipFile("/tmp/${nome}").extractall("/motor")`);
+        }
+      }
+    })().catch((e) => { extras = null; throw e; });
+  }
+  return extras;
+}
+export async function resumo(processo) {
+  const m = await carregar();
+  const r = JSON.parse(m.py.globals.get("rspe_painel").resumo_assistido(JSON.stringify({ processo })));
+  return r.erro ? { ok: false, erro: r.erro } : { ok: true, d: r };
+}
+export async function resumoPdf(d, canhoto) {
+  const m = await carregar();
+  await prepararExtras(m);
+  const r = JSON.parse(m.py.globals.get("rspe_painel").resumo_pdf(JSON.stringify({ d, canhoto: !!canhoto })));
+  const bytes = m.py.FS.readFile(r.caminho);
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return { ok: true, b64: btoa(bin), canhoto: r.canhoto, verso: r.verso };
+}

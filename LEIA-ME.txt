@@ -24,6 +24,10 @@ APTO - Auditoria de Prazos e Tempo de Cumprimento Organizada  v7.32.0
   for da mesma pessoa (nome e mãe, CPF, autos ou nascimento). Com ela, falta
   grave, comportamento e trabalho deixam de ficar para conferir; ficha impressa
   há mais de 90 dias: conferir a atual.
+  Resumo para o assistido no painel: o mesmo texto e o mesmo PDF do APTO,
+  conferidos no próprio painel; antes do PDF, escolha onde é o atendimento -
+  na unidade prisional (com o canhoto para pedir o próximo atendimento) ou
+  fora dela (Defensoria, fórum, telefone ou vídeo: sem o canhoto).
   Limite: a leitura foi construída sobre as capturas oficiais do SEEU (TJSP,
   2026) e sobre fichas sintéticas; o HTML real das abas e uma ficha real do
   SIAPEN ainda precisam ser conferidos (docs/painel_seeu).
