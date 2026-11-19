@@ -46,8 +46,9 @@ for c in casos:
     p1 = rp.analisar(rs.reprocessar(copy.deepcopy(c["rspe"])), hoje=HOJE)
     p2 = rp.analisar(r2, hoje=HOJE)
     # o aviso "reimportar o RSPE lido por versão anterior" é do arquivo antigo, não da leitura nova das abas
-    sem_reimp = lambda p: [[{k: v for k, v in i.items() if k != "id"} for i in s["itens"] if "Reimportar" not in i["titulo"]] for s in p["secoes"]]
-    if sem_reimp(p1) == sem_reimp(p2) and p1["pena"] == p2["pena"] and p1["nao_cabe"] == p2["nao_cabe"]:
+    sem_reimp = lambda L: [{k: v for k, v in i.items() if k != "id"} for i in L if "Reimportar" not in i["titulo"]]
+    if (sem_reimp(p1["alertas"]) == sem_reimp(p2["alertas"]) and p1["confere"] == p2["confere"] and p1["marcos"] == p2["marcos"]
+            and p1["pena"] == p2["pena"] and p1["nao_cabe"] == p2["nao_cabe"]):
         mesmo_painel += 1
     else:
         falhas.append("%s: painel pelas abas diferente do painel pelo RSPE" % c["id"])
@@ -65,7 +66,7 @@ ok(r2["nome"] == "NOME NA ABA PARTES", "nome da aba Partes (veio %r)" % r2["nome
 ab = seeu.abas_dict(casos[0]["rspe"])
 del ab["eventos"]
 p = json.loads(rp.analisar_abas(json.dumps({"abas": ab, "hoje": "12/10/2026"}, ensure_ascii=False)))
-fal = [i for s in p["secoes"] for i in s["itens"] if i["id"] == "faltou"]
+fal = [i for i in p["alertas"] if i["id"] == "faltou"]
 ok(fal and fal[0]["status"] == "amarelo" and "eventos" in fal[0]["motivo"].lower(), "aba Eventos ausente: ponto a conferir (%r)" % fal)
 
 # página sem processo (sessão expirada, página de erro): sem dados, sem painel

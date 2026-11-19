@@ -16,6 +16,16 @@ O SEEU não muda: o painel só reserva a sua largura na página, não clica, nã
    livramento, término), benefícios (indulto, comutação, prescrição, extinção, saída temporária) e os demais pontos
    (atestado, auditoria do cálculo, crimes em execução, hipóteses afastadas).
 
+## Hierarquia
+
+1. **Pena e marcos**, compactos: pena total, cumprida e remanescente e uma linha por marco (data-base, progressão,
+   livramento, término) com a data e quanto falta. Destaque só quando o marco está **próximo** (até 60 dias) ou já foi
+   **atingido** (progressão e livramento). A fração e a conta abrem no clique.
+2. **Para conferir**, em cartões: o destaque do painel. Tudo o que é amarelo, inclusive a dúvida num marco (o marco
+   ganha um sinal na linha).
+3. **Confere**, em linhas discretas: o que está verde nos benefícios (ex.: prescrição não aparente).
+4. Crimes em execução e, recolhidas, as hipóteses afastadas.
+
 ## Duas situações só
 
 | Situação | Quando |
@@ -52,5 +62,5 @@ O que não for achado não vira dado: fica em branco, e o painel mostra "Não li
 
 ## Protótipo
 
-`python ferramentas/seeu_ficticio/prototipo.py S035 saida.html` gera a página fictícia do SEEU com o painel calculado de
+`python ferramentas/seeu_ficticio/prototipo.py S037 saida.html --hoje 18/10/2026` gera a página fictícia do SEEU com o painel calculado de
 verdade (imagens em `v2/`).

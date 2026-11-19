@@ -32,7 +32,9 @@ casos = {c["id"]: c for c in json.load(open(os.path.join(AQUI, "casos_simulados"
 
 
 def itens(p):
-    return [it for s in p["secoes"] for it in s["itens"]]
+    """Todos os pontos do painel: os alertas (para conferir) e o que confere; os marcos entram como pontos pelo id."""
+    return p["alertas"] + p["confere"] + [{"id": m["id"], "status": "amarelo" if m["alerta"] else "verde", "status_txt": "Conferir" if m["alerta"] else "Confere",
+                                           "conferir": "", "motivo": m["quando"]} for m in p["marcos"]]
 
 
 # 1) indulto possível sem ficha: amarelo (falta grave na ficha), nunca verde
@@ -54,24 +56,30 @@ ok(rp.analisar(r, hoje=date(2026, 10, 13))["chave"] != a["chave"], "outra data d
 r = copy.deepcopy(casos["S001"]["rspe"])
 r["_incidentes"] = [i for i in r.get("_incidentes") or [] if "REMI" not in (i.get("tipo") or "").upper()]
 at = next((x for x in itens(rp.analisar(r, hoje=HOJE)) if x["id"] == "atestado"), None)
-ok(at and at["status"] == "amarelo" and "atestado" in at["conferir"], "sem remição há mais de 6 meses: pedir atestado (%r)" % (at,))
+ok(at and at in rp.analisar(r, hoje=HOJE)["alertas"] and at["status"] == "amarelo" and "atestado" in at["conferir"], "sem remição há mais de 6 meses: pedir atestado (%r)" % (at,))
 r["_incidentes"].append({"tipo": "REMIÇÃO", "complemento": "10 Dia(s) Remido(s)", "data_decisao": "01/09/2026", "data_referencia": "01/09/2026", "situacao": "CONCEDIDO"})
 ok(not any(x["id"] == "atestado" for x in itens(rp.analisar(r, hoje=HOJE))), "remição decidida há 1 mês: sem alerta de atestado")
 
-# 4) só verde e amarelo, nas seções da ficha do assistido, contagem certa
+# 4) hierarquia: marcos em linhas (data e quanto falta), alertas = tudo que é amarelo, confere = o verde dos benefícios
 for cid in ("S001", "S006", "S035", "S093", "S141"):
     p = rp.analisar(casos[cid]["rspe"], hoje=HOJE)
-    ids = [s["id"] for s in p["secoes"]]
-    ok(ids == [x for x in ("marcos", "beneficios", "demais") if x in ids], "%s: ordem das seções %s" % (cid, ids))
-    ok(all(x["status"] in ("verde", "amarelo") for x in itens(p)), "%s: situação fora de verde/amarelo" % cid)
-    ok(all((x["status"] == "verde") == (x["status_txt"] == "Confere") for x in itens(p)), "%s: texto da situação" % cid)
-    ok(not any(x["status"] == "verde" and x["conferir"] for x in itens(p)), "%s: verde com ponto a conferir" % cid)
-    ok(p["contagem"]["amarelo"] == sum(1 for x in itens(p) if x["status"] == "amarelo"), "%s: contagem" % cid)
-    ok(p["pena"]["total"] and p["pena"]["termino"], "%s: pena e término no topo" % cid)
+    ok(all(a["status"] == "amarelo" for a in p["alertas"]) and all(c["status"] == "verde" for c in p["confere"]), "%s: alertas só amarelos, confere só verde" % cid)
+    ok(all(x["status_txt"] == "Conferir" for x in p["alertas"]), "%s: texto da situação" % cid)
+    ok(p["contagem"]["amarelo"] == len(p["alertas"]), "%s: contagem dos alertas" % cid)
+    ok([m["id"] for m in p["marcos"]][:1] == ["db"] and all(m["data"] for m in p["marcos"]), "%s: marcos começam pela data-base, todos com data" % cid)
+    ok(all(m["destaque"] in ("", "proximo", "atingida") for m in p["marcos"]), "%s: destaque dos marcos" % cid)
+    ok(p["pena"]["total"] and "agir" not in json.dumps(p, ensure_ascii=False).lower(), "%s: pena no topo, sem 'agir já'" % cid)
+# marco próximo: destaque, sem virar alerta só por estar perto
+p = rp.analisar(casos["S037"]["rspe"], hoje=date(2026, 10, 18))
+prog = next(m for m in p["marcos"] if m["id"] == "prog")
+ok(prog["destaque"] == "proximo" and not prog["alerta"] and not any(a["id"] == "prog" for a in p["alertas"]), "progressão a 19 dias: próximo, sem alerta (%r)" % prog)
+# marco com dúvida no cálculo (percentual do SEEU acima do legal): sinal na linha E alerta
+p = rp.analisar(casos["S006"]["rspe"], hoje=HOJE)
+ok(any(m["id"] == "prog" and m["alerta"] for m in p["marcos"]) and any(a["id"] == "prog" for a in p["alertas"]), "progressão com dúvida: alerta")
 
 # 5) progressão já atingida com data certa: verde, dita como fato (sem urgência)
-prog = next((x for x in itens(rp.analisar(casos["S035"]["rspe"], hoje=HOJE)) if x["id"] == "prog"), None)
-ok(prog and prog["status"] == "verde" and "atingida" in prog["motivo"], "progressão atingida, data certa: verde (%r)" % (prog,))
+prog = next((m for m in rp.analisar(casos["S035"]["rspe"], hoje=HOJE)["marcos"] if m["id"] == "prog"), None)
+ok(prog and not prog["alerta"] and prog["destaque"] == "atingida" and "atingida" in prog["quando"], "progressão atingida, data certa: destaque, sem alerta (%r)" % (prog,))
 
 # 6) pelas abas do SEEU (a entrada da extensão, em texto): mesmo resultado que ler + analisar
 ab = seeu.abas_dict(casos["S093"]["rspe"])

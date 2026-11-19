@@ -28,13 +28,44 @@ button:focus-visible,summary:focus-visible{outline:3px solid var(--foco);outline
 .fonte{margin:10px 0 0;font-size:12px;color:var(--tx-3);display:flex;flex-direction:column;gap:5px}
 .chip{display:inline-flex;align-items:center;gap:5px;align-self:flex-start;background:var(--med-bg);color:var(--med);border:1px solid #E6D8A8;border-radius:12px;padding:1px 9px 1px 7px;font-weight:600}
 .pena{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 11px;margin-top:10px}
-.kv{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px}
+.kv{display:grid;grid-template-columns:repeat(3,1fr);gap:8px 10px}
+.kv b{font-size:13px;line-height:1.3}
 .kv small{display:block;font-size:11.5px;color:var(--tx-3);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
 .kv b{font-weight:700;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
 .barra{height:6px;background:#E4E7EA;border-radius:3px;margin-top:10px;overflow:hidden}
 .barra span{display:block;height:100%;background:var(--brand)}
 .pct{font-size:12px;color:var(--tx-2);margin-top:4px}
 .aviso-exec{margin-top:8px;font-size:12.5px;color:var(--tx-2)}
+/* marcos: linhas compactas dentro do bloco da pena (só a data e quanto falta) */
+.marcos{list-style:none;margin:10px -11px -10px;padding:0;border-top:1px solid var(--line)}
+.marcos li{border-bottom:1px solid var(--line)}
+.marcos li:last-child{border-bottom:0;border-radius:0 0 8px 8px}
+.marcos summary,.marcos .linha{display:grid;grid-template-columns:1fr auto;column-gap:10px;padding:5px 11px 5px 11px;list-style:none;color:var(--tx);font-weight:400;min-height:0}
+.marcos summary::-webkit-details-marker{display:none}
+.marcos summary:hover{background:var(--surface-2)}
+.mr{font-weight:600;font-size:13px;display:flex;align-items:center;gap:4px}
+.md{font-variant-numeric:tabular-nums;font-weight:700;text-align:right}
+.mq{grid-column:1 / -1;font-size:12px;color:var(--tx-3);display:flex;align-items:center;gap:6px}
+.mk{display:inline-flex;color:var(--med)}
+.marcos li.on{background:#FBF4E0;box-shadow:inset 3px 0 0 var(--med-mk)}
+.dest{display:inline-block;border-radius:9px;padding:0 7px;font-size:11px;font-weight:700;line-height:17px}
+.dest.proximo{background:var(--med-bg);color:var(--med);border:1px solid #E6D8A8}
+.dest.atingida{background:var(--med);color:#fff}
+.mdet{padding:0 11px 8px;font-size:12.5px;color:var(--tx-2);font-variant-numeric:tabular-nums}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+/* alertas: o destaque do painel */
+.h-al{color:var(--med);font-size:12.5px;display:flex;align-items:center;gap:6px}
+.cnt{background:var(--med);color:#fff;border-radius:9px;padding:0 7px;font-size:11.5px;letter-spacing:0;line-height:18px}
+.alertas,.confere{list-style:none;margin:0;padding:0}
+.al{background:var(--surface);border:1px solid #E6D8A8;border-left:4px solid var(--med-mk);border-radius:8px;padding:8px 10px;margin-bottom:6px;box-shadow:0 1px 2px rgba(118,92,0,.08)}
+.al .ic{display:inline-flex;color:var(--med);align-self:center}
+.al details{margin-top:5px;font-size:12.5px;color:var(--tx-2)}
+/* o que confere: linhas discretas */
+.confere li{display:flex;gap:6px;align-items:baseline;padding:4px 2px;border-bottom:1px solid var(--line);font-size:13px}
+.confere li:last-child{border-bottom:0}
+.confere .ic{color:var(--ok);display:inline-flex;align-self:center}
+.confere .t{font-weight:600}
+.vazio{display:flex;gap:6px;align-items:center;color:var(--ok);font-weight:600;margin:4px 2px}
 h2{font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tx-3);margin:16px 2px 6px}
 .lista,.crimes{list-style:none;margin:0;padding:0}
 .it{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--ok-mk);border-radius:8px;padding:8px 10px;margin-bottom:6px}

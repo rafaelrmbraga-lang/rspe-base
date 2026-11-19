@@ -23,8 +23,9 @@ import rspe_regras as rg
 import rspe_scraper as rs
 import rspe_view as rv
 
-VERSAO_PAINEL = 2
-SEM_ATESTADO_DIAS = 180  # 6 meses sem remição decidida, custodiado: pedir atestado
+VERSAO_PAINEL = 3
+SEM_ATESTADO_DIAS = 180
+PROXIMO_DIAS = 60         # marco a até 60 dias: destaque de "próximo"  # 6 meses sem remição decidida, custodiado: pedir atestado
 
 CTX_VAZIO = {"baixas": {}, "fichas": {}, "manuais": {}, "ajustes": {}, "dmanuais": {}, "peds": {}, "hist_n": {}, "fixados": {},
              "homonimos": {}, "outras_cond": {}, "outros_procs": {}, "outras_exec": {}, "homon_det": {}}
@@ -113,7 +114,9 @@ def montar(r, m, hoje, faltou=None):
     # ---- pena e data-base (como o topo da ficha do assistido)
     t, c = m.get("pena_total_dias"), m.get("pena_cumprida_dias")
     pct = max(0, min(100, round(c * 100 / t))) if isinstance(t, (int, float)) and t and isinstance(c, (int, float)) else None
-    pena = {"total": m.get("pena_total") or "—", "cumprida": m.get("pena_cumprida") or "—", "remanescente": m.get("pena_rem") or "—",
+    # formato curto do SEEU (o mesmo da capa do processo), que cabe na coluna; sem ele, o do APTO por extenso
+    pena = {"total": r.get("pena_total") or m.get("pena_total") or "—", "cumprida": r.get("pena_cumprida") or m.get("pena_cumprida") or "—",
+            "remanescente": r.get("pena_remanescente") or m.get("pena_rem") or "—",
             "termino": m.get("termino") or "—", "pct": pct, "regime": reg, "aviso": m.get("motivo_exec") or ""}
     db_duv = (m.get("db_cor") or "") in ("amarelo", "vermelho", "laranja")
     marcos.append(_item("db", not db_duv, "Data-base (progressão)", m.get("db") or "—", m.get("db_motivo") or "",
@@ -124,7 +127,7 @@ def montar(r, m, hoje, faltou=None):
     ps = m.get("prog_sit") or ""
     if m.get("prog") and m.get("prog") != "—" and not NAO_SE_APLICA.match(ps):
         prox = next((v for k, v in PROXIMO.items() if k in reg_l), "")
-        duv = bool(DUVIDA.search(ps)) or (m.get("prog_cor") or "") in ("amarelo", "laranja")
+        duv = bool(DUVIDA.search(ps))  # a cor do APTO na progressão é de proximidade, não de dúvida: a dúvida vem do texto
         marcos.append(_item("prog", not duv, "Progressão ao " + prox if prox else "Progressão de regime", m.get("prog"),
                             "; ".join(x for x in (_quando(m.get("prog"), hoje), "fração " + m["frac_prog"] if m.get("frac_prog") else "") if x),
                             ps if duv else "",
@@ -136,7 +139,7 @@ def montar(r, m, hoje, faltou=None):
     if re.match(r"vedad|n[aã]o cab", ls, re.I):
         nao_cabe.append({"titulo": "Livramento condicional", "motivo": ls})
     elif m.get("liv") and m.get("liv") != "—" and not NAO_SE_APLICA.match(ls):
-        duv = bool(DUVIDA.search(ls)) or (m.get("liv_cor") or "") in ("amarelo", "laranja")
+        duv = bool(DUVIDA.search(ls))
         marcos.append(_item("liv", not duv, "Livramento condicional", m.get("liv"),
                             "; ".join(x for x in (_quando(m.get("liv"), hoje), "fração " + m["frac_liv"] if m.get("frac_liv") else "") if x),
                             ls if duv else "",
@@ -211,14 +214,29 @@ def montar(r, m, hoje, faltou=None):
     crimes = [{"texto": "%s (%s)" % (x.get("nome_crime") or "Crime", x.get("dispositivo") or ""), "pena": x.get("pena") or "",
                "proc": x.get("proc") or "", "hediondo": x.get("hediondo_txt") or ""}
               for x in m.get("crimes_det") or [] if not re.match(r"^s", x.get("extinto") or "", re.I)]
-    secoes = [{"id": "marcos", "titulo": "Marcos", "itens": marcos}, {"id": "beneficios", "titulo": "Benefícios", "itens": beneficios},
-              {"id": "demais", "titulo": "Demais pontos", "itens": demais}]
-    secoes = [x for x in secoes if x["itens"]]
-    todos = [x for s in secoes for x in s["itens"]]
-    cont = {"verde": sum(1 for x in todos if x["status"] == "verde"), "amarelo": sum(1 for x in todos if x["status"] == "amarelo")}
+    # ---- apresentação (v2.1, 11/2026): os marcos em linhas compactas (só a data e quanto falta; destaque quando está
+    # próximo ou já foi atingido); o DESTAQUE fica com os alertas (tudo o que é para conferir, em cartões); o que confere
+    # nos benefícios fica em linhas.
+    linhas, alertas = [], []
+    for x in marcos:
+        d = rs.to_date(x["valor"] or "")
+        n = (d - hoje).days if d else None
+        quando = _quando(x["valor"], hoje) if x["id"] != "db" else ""
+        extra = x["motivo"].replace(quando + "; ", "").replace(quando, "").strip("; ") if quando else x["motivo"]
+        dest = ""
+        if n is not None and x["id"] != "db":
+            dest = "proximo" if 0 <= n <= PROXIMO_DIAS else ("atingida" if n < 0 and x["id"] in ("prog", "liv") else "")
+        linhas.append({"id": x["id"], "rotulo": x["titulo"], "data": x["valor"], "quando": quando, "extra": extra, "destaque": dest,
+                       "alerta": x["status"] == "amarelo", "conta": x["conta"], "fundamento": x["fundamento"]})
+        if x["status"] == "amarelo":
+            alertas.append(dict(x))
+    confere = []
+    for x in beneficios + demais:
+        (confere if x["status"] == "verde" else alertas).append(x)
+    cont = {"verde": len(confere) + sum(1 for x in linhas if not x["alerta"]), "amarelo": len(alertas)}
     return {"processo": m.get("id") or r.get("processo_execucao") or "", "nome": m.get("nome") or r.get("nome") or "", "regime": reg,
-            "hoje": rs.fmt(hoje), "pena": pena, "secoes": secoes, "crimes": crimes, "nao_cabe": nao_cabe, "contagem": cont,
-            "ficha": not sem_ficha}
+            "hoje": rs.fmt(hoje), "pena": pena, "marcos": linhas, "alertas": alertas, "confere": confere, "crimes": crimes,
+            "nao_cabe": nao_cabe, "contagem": cont, "ficha": not sem_ficha}
 
 
 def _assinar(p):
