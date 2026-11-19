@@ -192,8 +192,9 @@ def gerar(destino, cap, versao):
 
     s += [PageBreak(), Paragraph("4. Movimentações", E["h1"]),
           Paragraph("Na aba <b>Movimentações</b>, cada evento ganha cor e etiqueta pelo <b>conteúdo</b> (o realce do SEEU colore só por "
-                    "quem movimentou). Fundo colorido só no que se procura de relance - <b>decisão</b> (azul), <b>MP</b> (vermelho) e "
-                    "<b>DPE</b> (verde); as demais categorias têm a faixa lateral e a etiqueta, e o cartório fica em cinza discreto:", E["p"])]
+                    "quem movimentou), em três níveis: <b>decisão</b> (azul), <b>MP</b> (vermelho) e <b>DPE</b> (verde) com fundo, faixa "
+                    "grossa e título em negrito; despacho, ADV, Depen, perícia e audiência com etiqueta suave; o <b>cartório</b>, a maior "
+                    "parte, sem etiqueta e em cinza. O realce próprio do SEEU não aparece por baixo:", E["p"])]
     cores = [("Decisão", "#1F4E8C", "#fff"), ("Despacho", "#E3ECF7", "#1F4E8C"), ("MP", "#C62828", "#fff"), ("DPE", "#1B7F4B", "#fff"),
              ("ADV", "#EEE7F7", "#4B2A78"), ("Depen", "#FBF0CF", "#5C4300"), ("Perícia", "#EFE7E3", "#4E342E"), ("Cartório", "#EEF0F2", "#6B7278"),
              ("Audiência", "#DDF1F6", "#0B5466")]

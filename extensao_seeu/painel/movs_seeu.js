@@ -12,34 +12,40 @@
   const C = self.APTO_PAINEL_CORE;
   if (!C || !C.classificarMov) return;
 
-  // esquema "só o essencial com cor": fundo só no que se procura de relance (decisão, MP, DPE); despacho, advogado, Depen, perícia
-  // e audiência com a faixa e a etiqueta; o cartório (a maior parte das movimentações) em cinza discreto, para o resto saltar aos olhos
-  const COR = {   // barra à esquerda, fundo da linha, etiqueta (fundo, texto), nome
-    decisao: ["#1F4E8C", "#E6EEFA", "#1F4E8C", "#fff", "Decisão"],
-    despacho: ["#7FA7D9", "", "#E3ECF7", "#1F4E8C", "Despacho"],
-    mp: ["#C62828", "#FDECEC", "#C62828", "#fff", "MP"],
-    defensoria: ["#1B7F4B", "#E8F5EE", "#1B7F4B", "#fff", "DPE"],
-    advogado: ["#6A3FA0", "", "#EEE7F7", "#4B2A78", "ADV"],
-    unidade: ["#B8860B", "", "#FBF0CF", "#5C4300", "Depen"],
-    pericia: ["#6D4C41", "", "#EFE7E3", "#4E342E", "Perícia"],
-    audiencia: ["#0E7490", "", "#DDF1F6", "#0B5466", "Audiência"],
-    cartorio: ["#C9CED2", "", "#EEF0F2", "#6B7278", "Cartório"],
+  // esquema "hierarquia" (escolhido sobre as linhas reais): três níveis, para bater o olho e achar -
+  //   forte: decisão, MP e DPE - fundo colorido, faixa grossa, título em negrito forte, etiqueta cheia;
+  //   suave: despacho, ADV, Depen, perícia e audiência - faixa fina e etiqueta suave, sem fundo;
+  //   cartório: sem etiqueta, texto em cinza (é a maior parte das movimentações: some, e o resto salta).
+  const COR = {   // nível, cor da faixa/etiqueta forte, fundo, etiqueta (fundo, texto), nome
+    decisao: ["forte", "#1F4E8C", "#E3ECFA", "#1F4E8C", "#fff", "Decisão"],
+    mp: ["forte", "#C62828", "#FBE4E4", "#C62828", "#fff", "MP"],
+    defensoria: ["forte", "#1B7F4B", "#DFF2E7", "#1B7F4B", "#fff", "DPE"],
+    despacho: ["suave", "#1F4E8C", "", "#E3ECF7", "#1F4E8C", "Despacho"],
+    advogado: ["suave", "#4B2A78", "", "#EEE7F7", "#4B2A78", "ADV"],
+    unidade: ["suave", "#8A6A00", "", "#FBEFC5", "#5C4300", "Depen"],
+    pericia: ["suave", "#4E342E", "", "#EFE7E3", "#4E342E", "Perícia"],
+    audiencia: ["suave", "#0B5466", "", "#DDF1F6", "#0B5466", "Audiência"],
+    cartorio: ["cartorio", "#C9CED2", "", "", "", "Cartório"],
   };
-
-  // a linha e o seu detalhe (o "+" abre os documentos numa linha logo abaixo): a mesma cor
-  // máscara sobre o realce do próprio SEEU (fundos de "Magistrado", "Defensor"...): nas linhas classificadas, o fundo é o neutro
-  // (branco e cinza claro alternados, como a tabela do SEEU) e só as categorias do APTO ganham cor - as regras de cor vêm depois e
-  // são mais específicas (o atributo repetido), para vencer sempre
+  // máscara sobre o realce do próprio SEEU (fundos de "Magistrado", "Defensor"...): nas linhas classificadas, fundo branco e só as
+  // cores do APTO - as regras de cor vêm depois e são mais específicas (atributo repetido), para vencer sempre
   const T = "table.apto-movs tbody>";
-  const neutro = `${T}tr[data-apto-mov]>td,${T}tr[data-apto-det]>td{background-color:#fff!important;background-image:none!important}
-    ${T}tr.even[data-apto-mov]>td,${T}tr.even[data-apto-det]>td{background-color:#F6F7F8!important}\n`;
-  const css = neutro + Object.entries(COR).map(([k, [bar, bg, tb, tc]]) =>
-    `${T}tr[data-apto-mov="${k}"]>td:first-child,${T}tr[data-apto-det="${k}"]>td:first-child{box-shadow:inset 4px 0 0 ${bar}}` +
-    (bg ? `${T}tr[data-apto-mov="${k}"][data-apto-mov]>td,${T}tr[data-apto-det="${k}"][data-apto-det]>td{background-color:${bg}!important}` : "") +
-    `tr[data-apto-mov="${k}"] .apto-tag{background:${tb};color:${tc}}`).join("\n") + `
-    .apto-tag{display:inline-block;margin:0 6px 2px 0;padding:1px 7px;border-radius:999px;font:700 10.5px/1.5 "Source Sans 3","Segoe UI",system-ui,sans-serif;
+  // a linha também (a célula esmaecida é translúcida: o fundo da linha, que o realce do SEEU pinta, apareceria por baixo)
+  const neutro = `${T}tr[data-apto-mov],${T}tr[data-apto-det],${T}tr[data-apto-mov]>td,${T}tr[data-apto-det]>td{background-color:#fff!important;background-image:none!important}\n`;
+  const css = neutro + Object.entries(COR).map(([k, [nivel, cor, bg, tb, tc]]) => {
+    const sel = `${T}tr[data-apto-mov="${k}"][data-apto-mov]`, det = `${T}tr[data-apto-det="${k}"][data-apto-det]`;
+    if (nivel === "cartorio") {
+      return `${sel}>td,${sel}>td *{color:#8F969C!important}${sel}>td b,${sel}>td b *{color:#6F767D!important;font-weight:400!important}` +
+        `${sel}>td a,${sel}>td a *{color:#5A87B8!important}`;
+    }
+    return `${sel}>td:first-child,${det}>td:first-child{box-shadow:inset ${nivel === "forte" ? 6 : 3}px 0 0 ${cor}}` +
+      (bg ? `${sel},${det},${sel}>td,${det}>td{background-color:${bg}!important}` : "") +
+      (nivel === "forte" ? `${sel}>td b{font-weight:800!important;color:#1E2226!important}` : `${sel}>td b{font-weight:700!important}`) +
+      `tr[data-apto-mov="${k}"] .apto-tag{background:${tb};color:${tc}}`;
+  }).join("\n") + `
+    .apto-tag{display:inline-block;margin:0 7px 2px 0;padding:1px 8px;border-radius:999px;font:700 10.5px/1.6 "Source Sans 3","Segoe UI",system-ui,sans-serif;
       letter-spacing:.02em;vertical-align:1px;white-space:nowrap}
-    table.apto-movs.apto-esmaecer tr[data-apto-arq="0"]>td{opacity:.45}
+    table.apto-movs.apto-esmaecer tr[data-apto-arq="0"]>td{opacity:.55}
     tr[data-apto-det]>td .extendedinfo,tr[data-apto-det]>td table{background:transparent!important}
     table.apto-movs.apto-esmaecer tr[data-apto-arq="0"]:hover>td{opacity:1}
     table.apto-movs tr.apto-oculta,table.apto-movs tr.apto-oculta+tr[id^="rowmov"]{display:none!important}`;
@@ -67,10 +73,10 @@
       tr.dataset.aptoArq = temArq ? "1" : "0";
       n._sem = (n._sem || 0) + (temArq ? 0 : 1);
       n[cat] = (n[cat] || 0) + 1;
-      if (COR[cat] && b && !b.querySelector(".apto-tag")) {
+      if (COR[cat] && COR[cat][3] && b && !b.querySelector(".apto-tag")) {
         const t = document.createElement("span");
         t.className = "apto-tag";
-        t.textContent = COR[cat][4];
+        t.textContent = COR[cat][5];
         const alvo = b.querySelector("div") || b;   // no SEEU, o título fica num div dentro do negrito: a etiqueta vai na mesma linha
         alvo.insertBefore(t, alvo.firstChild);
       }
@@ -94,7 +100,7 @@
     const raiz = host.attachShadow({ mode: "open" });
     const total = Object.entries(n).filter(([k]) => k !== "_sem").reduce((a, [, b]) => a + b, 0);
     const chips = C.CAT_MOV.filter(([k]) => n[k]).map(([k, r]) => {
-      const cor = COR[k] ? COR[k][0] : "#5C636A";
+      const cor = COR[k] ? COR[k][1] : "#5C636A";
       return `<button type="button" class="ch" data-cat="${k}" aria-pressed="false" style="--c:${cor}"><i aria-hidden="true"></i>${r}<b>${n[k]}</b></button>`;
     }).join("");
     raiz.innerHTML = `<style>

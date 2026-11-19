@@ -145,7 +145,8 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     let L = await cat();
     ok(L[1][0] === "decisao" && L[1][3] === "Decisão" && L[3][0] === "mp" && L[5][0] === "unidade" && L[6][0] === "defensoria" && L[8][0] === "despacho" && L[9][0] === "audiencia",
       id + ": movimentações classificadas pelo conteúdo (" + L.map((x) => x[0]).join(",") + ")");
-    ok(L[0][0] === "cartorio" && L[0][3] === "Cartório" && /201, 206, 210/.test(L[0][5]), id + ": cartório em cinza discreto, com etiqueta (" + L[0][5] + ")");
+    ok(L[0][0] === "cartorio" && L[0][3] === "" && await pg.evaluate(() => getComputedStyle(document.querySelector("table.resultTable tbody > tr[id^='mov'] b")).color) === "rgb(111, 118, 125)",
+      id + ": cartório sem etiqueta, em cinza");
     ok(L[3][0] === "mp" && /198, 40, 40/.test(L[3][5]) && L[6][0] === "defensoria" && L[6][3] === "DPE" && /27, 127, 75/.test(L[6][5]), id + ": MP em vermelho, DPE em verde");
     // realce nativo do SEEU (fundo menta do "Defensor", rosa do "Magistrado"): a máscara do APTO prevalece; cores exatas do esquema
     const fundos = await pg.evaluate(() => {
@@ -153,9 +154,12 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
       trs.forEach((tr) => { tr.style.backgroundColor = "#A8F0D8"; [...tr.children].forEach((td) => { td.style.backgroundColor = "#A8F0D8"; }); });
       return trs.map((tr) => getComputedStyle(tr.children[2]).backgroundColor);
     });
-    ok(fundos[3] === "rgb(253, 236, 236)" && fundos[6] === "rgb(232, 245, 238)" && fundos[1] === "rgb(230, 238, 250)", id + ": MP, DPE e decisão com as cores do esquema (" + [fundos[3], fundos[6], fundos[1]].join(" | ") + ")");
+    const linhasBg = await pg.evaluate(() => [...document.querySelectorAll("table.resultTable tbody > tr[id^='mov']")].map((tr) => getComputedStyle(tr).backgroundColor));
+    ok(linhasBg.every((f) => !/168, 240, 216/.test(f)), id + ": nem a linha (por baixo da célula esmaecida) fica com o realce do SEEU (" + linhasBg.join(" | ") + ")");
+    ok(fundos[3] === "rgb(251, 228, 228)" && fundos[6] === "rgb(223, 242, 231)" && fundos[1] === "rgb(227, 236, 250)", id + ": MP, DPE e decisão com as cores do esquema (" + [fundos[3], fundos[6], fundos[1]].join(" | ") + ")");
     ok(fundos.every((f) => !/168, 240, 216/.test(f)), id + ": o realce nativo do SEEU não aparece por baixo (" + fundos.join(" | ") + ")");
-    ok(L.every((x) => (x[4] === "0") === (x[2] === "0.45")), id + ": esmaecido só o que não tem arquivo vinculado (" + L.map((x) => x[4] + ":" + x[2]).join(",") + ")");
+    await pg.screenshot({ path: path.join(SAIDA, "movimentacoes_realce.png"), fullPage: true });
+    ok(L.every((x) => (x[4] === "0") === (x[2] === "0.55")), id + ": esmaecido só o que não tem arquivo vinculado (" + L.map((x) => x[4] + ":" + x[2]).join(",") + ")");
     await pg.screenshot({ path: path.join(SAIDA, "movimentacoes.png"), fullPage: true });
     // prévia do documento ao passar o mouse no link (sem nova aba): o quadro abre ao lado, com a 1ª página desenhada
     const nAbas = ctx.pages().length;
