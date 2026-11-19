@@ -36,17 +36,6 @@
     return `<div class="fonte" role="note"><span>Regras do APTO sobre o relatório da situação processual do SEEU · referência ${esc(p.hoje || "")}</span></div>` + fic;
   }
 
-  function pena(p) {
-    const x = p.pena || {};
-    const pct = typeof x.pct === "number" ? x.pct : null;
-    return `<div class="kv">` +
-      [["Pena total", x.total], ["Cumprida", x.cumprida], ["Remanescente", x.remanescente]]
-        .map(([r, v]) => `<div><small>${r}</small><b>${esc(v || "—")}</b></div>`).join("") + `</div>` +
-      (pct != null ? `<div class="barra" role="img" aria-label="${pct}% da pena cumprida"><span style="width:${pct}%"></span></div>` +
-        `<div class="pct">${pct}% cumprida</div>` : "") +
-      (x.aviso ? `<div class="aviso-exec">${esc(x.aviso)}</div>` : "");
-  }
-
   // alertas: o destaque do painel, um cartão por ponto a conferir; cada um copia o seu fundamento (título, conta e base legal)
   function alerta(it, i) {
     const temConta = (it.conta || []).length || it.fundamento;
@@ -88,8 +77,9 @@
 
   function corpo(res) {
     const p = res.painel || {};
-    // os marcos e o regime ficam nos chips da página do SEEU (abaixo do nº do processo): aqui, só a pena
-    let h = topo(p, res) + `<section class="pena" aria-label="Pena">${pena(p)}</section>`;
+    // pena, regime e marcos ficam no SEEU (capa e chips abaixo do nº do processo): aqui, só o aviso da execução, se houver
+    const av = (p.pena || {}).aviso;
+    let h = topo(p, res) + (av ? `<p class="aviso-exec solto">${esc(av)}</p>` : "");
     const A = p.alertas || [];
     h += `<section aria-labelledby="s-al"><h2 id="s-al" class="h-al">Para conferir${A.length ? ` <span class="cnt">${A.length}</span>` : ""}</h2>` +
       (A.length ? `<ul class="alertas">${A.map((a, i) => alerta(a, i)).join("")}</ul>` : `<p class="vazio">${ICO.verde} Nada para conferir.</p>`) + `</section>`;

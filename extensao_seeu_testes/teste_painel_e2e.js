@@ -53,7 +53,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     const antes = pedidos.length;
     await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=" + c.processo.replace(/\D/g, ""));
     const f = await moldura();
-    await f.waitForSelector(".pena, .aviso", { timeout: 90000 });
+    await f.waitForSelector(".h-al, .aviso", { timeout: 90000 });
     const leg = (await f.textContent(".leg")).replace(/\s+/g, " ").trim();
     const meus = pedidos.slice(antes);
     console.log(id, "·", leg, "·", meus.length - 1, "pedido de leitura ·", Date.now() - t0, "ms");
@@ -101,7 +101,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     const n0 = pedidos.length;
     await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabEventos");
     const f2 = await moldura();
-    await f2.waitForSelector(".pena", { timeout: 30000 });
+    await f2.waitForSelector(".h-al", { timeout: 30000 });
     ok(pedidos.length - n0 === 1, id + ": trocar de aba não deve refazer a leitura (" + pedidos.slice(n0 + 1).map((p) => p.url.slice(0, 90)).join(" | ") + ")");
   }
   // ficha disciplinar: carregar o PDF pelo botão do painel (a ficha é lida no navegador: pdf.js + o leitor do APTO)
@@ -109,7 +109,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     const [id, c] = Object.entries(DADOS)[0];
     await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=" + c.processo.replace(/\D/g, ""));
     const f = await moldura();
-    await f.waitForSelector(".pena", { timeout: 60000 });
+    await f.waitForSelector(".h-al", { timeout: 60000 });
     await f.setInputFiles("#arquivoFicha", c.ficha_pdf);
     await f.waitForSelector(".ficha.verde", { timeout: 60000 });
     const txt = (await f.textContent(".ficha")).replace(/\s+/g, " ");
@@ -159,7 +159,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     ok(await f.evaluate(() => { const r = document.getElementById("resVoltar").getBoundingClientRect(); return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2).id === "resVoltar"; }),
       id + ": o botão Voltar está coberto por outro elemento");
     await f.locator("#resVoltar").dispatchEvent("click");
-    await f.waitForSelector(".pena", { timeout: 15000 });
+    await f.waitForSelector(".h-al", { timeout: 15000 });
   }
   ok(ctx.pages().length === abasAntes, "nenhuma aba nova aberta (" + ctx.pages().length + " x " + abasAntes + ")");
   const f = await moldura();

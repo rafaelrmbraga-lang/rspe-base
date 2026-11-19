@@ -158,3 +158,4 @@ input:focus-visible,textarea:focus-visible{outline:3px solid var(--foco);outline
 [data-id]:focus{outline:none}
 [data-id].foco{box-shadow:0 0 0 3px #F2B705;transition:box-shadow .2s ease-out}
 @media (prefers-reduced-motion:reduce){[data-id].foco{transition:none}}
+.aviso-exec.solto{margin:8px 0 0;padding:6px 10px;border-radius:8px;background:var(--surface);border:1px solid var(--line)}

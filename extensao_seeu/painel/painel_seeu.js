@@ -65,7 +65,7 @@
     :host{all:initial}
     .faixa{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font:13px/1.2 "Source Sans 3","Segoe UI",system-ui,sans-serif;color:#1E2226}
     .seg{display:inline-flex;flex-wrap:wrap;align-items:stretch;background:#fff;border:1px solid #C9CED2;border-radius:10px;overflow:hidden}
-    .sg{all:unset;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:4px 11px;min-height:38px;
+    .sg{all:unset;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:2px;padding:4px 12px;min-height:38px;
       border-right:1px solid #E3E6E8;cursor:pointer}
     .sg:last-child{border-right:0}
     .sg:hover{background:#F2F4F5}

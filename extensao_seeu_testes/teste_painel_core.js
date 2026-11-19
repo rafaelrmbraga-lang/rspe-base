@@ -15,7 +15,7 @@ const res = { estado: "ok", painel: { processo: "9900001-00.2026.8.12.0001", nom
   contagem: { verde: 3, amarelo: 1 } } };
 const h = C.html(res);
 const pos = (t) => h.indexOf(t);
-ok(pos("Pena total") < pos("Para conferir") && pos("Para conferir") < pos(">Confere<") && pos(">Confere<") < pos("Crimes em execução"), "hierarquia: pena, para conferir, confere, crimes");
+ok(!h.includes("Pena total") && !h.includes('class="barra"') && pos("Para conferir") < pos(">Confere<") && pos(">Confere<") < pos("Crimes em execução"), "sem a pena no painel (está no SEEU); para conferir, confere, crimes");
 ok(!/<ul class="marcos"/.test(h) && !h.includes("Data-base (progressão)") && !h.includes("regime fechado"), "marcos e regime fora do painel lateral (estão nos chips da página)");
 // chips: regime e marcos numa faixa; próximo/atingida com ícone e texto; detalhe no clique; nº e nome com copiar na barra fixa
 const ch = C.chips(C.dadosChips(res), false), chf = C.chips(C.dadosChips(res), true);
@@ -43,7 +43,6 @@ ok(chm.includes("a &amp; b") && chm.includes("fração 16%"), "conta do marco no
 ok(/class="cnt">1</.test(h) && /class="al"/.test(h), "alertas em cartões, com contagem");
 ok(!/agir já|◆|▲/i.test(h), "sem 'agir já' e sem escala de urgência");
 ok(h.includes("Ficha disciplinar não lida"), "sem ficha: avisado");
-ok(h.includes('aria-label="33% da pena cumprida"'), "barra da pena com texto alternativo");
 ok(h.includes("1 hipótese afastada"), "não cabe recolhido, com contagem");
 ok(C.html({ estado: "ok", painel: Object.assign({}, res.painel, { alertas: [] }) }).includes("Nada para conferir"), "sem alertas: dito");
 ok(C.html({ estado: "sem_dados" }).includes("Não foi possível ler o processo"), "sem dados: orientação");

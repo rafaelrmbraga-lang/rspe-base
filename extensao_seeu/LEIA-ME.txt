@@ -31,7 +31,8 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.17) - NÃO PRECISA DO APTO
    extinção, prescrição e remição pendente - verde cabe, âmbar a conferir;
    clicar abre o cartão no painel, com a conta e o fundamento. Marco
    de progressão ou livramento vencido: vermelho com "!"; a até 60 dias: âmbar
-   com relógio; os demais, brancos.
+   com relógio; os demais, brancos. A pena (total, cumprida, remanescente)
+   fica na capa do SEEU: saiu do painel lateral.
  - "Copiar fundamento" copia o texto corrido, pronto para a petição (sem as
    marcas do painel), com a base legal no fim.
  - Alertas: indulto ou comutação já decididos no SEEU (concedido ou
