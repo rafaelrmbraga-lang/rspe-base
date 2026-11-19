@@ -26,3 +26,7 @@ modelos_atendimentos/
 
 # OCR embutido: montado no build (não vai para o repositório)
 tesseract/
+
+# painel no SEEU: gerado por ferramentas/motor_extensao/empacotar.py (os mesmos .py do APTO e o Pyodide fixado)
+extensao_seeu/motor/
+extensao_seeu_testes/saida_painel/

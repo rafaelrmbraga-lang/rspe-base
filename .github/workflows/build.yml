@@ -30,6 +30,19 @@ jobs:
       - name: Testes de regressão (falha aqui = não gera o .exe)
         run: python testes.py
 
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      # painel no SEEU: a extensão leva OS MESMOS .py do APTO e o Pyodide fixado (Python 3.12); os 144 casos simulados
+      # (com ficha e ajustes manuais) têm de dar resultado idêntico no APTO e na extensão - uma diferença = não gera o pacote
+      - name: Motor do painel e paridade APTO x extensão
+        run: |
+          python ferramentas/motor_extensao/empacotar.py
+          python ferramentas/motor_extensao/paridade_cpython.py paridade.json
+          node ferramentas/motor_extensao/paridade_pyodide.mjs paridade.json
+          python ferramentas/motor_extensao/paridade_ficha.py
+
       - name: Compilar com PyInstaller
         run: >
           python -m PyInstaller --onefile --windowed --clean --name APTO
@@ -55,6 +68,7 @@ jobs:
           # extensão do navegador (RSPE do SEEU, Triagem da Mesa, SIAPEN e SAP): pasta pronta para "Carregar sem compactação"
           Copy-Item -Recurse extensao_seeu pacote\extensao_seeu
           if (-not (Test-Path pacote\extensao_seeu\manifest.json)) { throw "extensao_seeu não entrou no pacote" }
+          if (-not (Test-Path pacote\extensao_seeu\motor\pyodide\pyodide.asm.wasm)) { throw "o motor do painel não entrou na extensão" }
           # o laboratório (SEI fictício e os testes do leitor) não vai para quem usa: só fica no repositório
           Remove-Item -Recurse -Force pacote\extensao_seeu\sei\teste, pacote\extensao_seeu\sei\lib\adaptador_ficticio.js, pacote\extensao_seeu\sei\lib\adaptador_sei_real.js -ErrorAction SilentlyContinue
           # OCR embutido (7.29): o Tesseract (Apache 2.0) e só o português "rápido" (tessdata_fast), numa pasta ao lado do APTO.exe

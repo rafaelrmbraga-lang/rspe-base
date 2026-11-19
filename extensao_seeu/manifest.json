@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
-  "name": "APTO - RSPE do SEEU, Triagem da Mesa, Ficha do SIAPEN, processos e atendimentos do SAP",
+  "name": "APTO - RSPE do SEEU, painel do processo, Triagem da Mesa, Ficha do SIAPEN, processos e atendimentos do SAP",
   "short_name": "APTO RSPE",
-  "version": "1.14.1",
-  "description": "RSPE do SEEU e ficha do SIAPEN para o APTO; leitura da Mesa, do SEI e da fila do SAP pedida pelo APTO (só leitura).",
+  "version": "1.15.0",
+  "description": "Painel do APTO na página do processo do SEEU (regras do APTO, sem precisar dele; só leitura); RSPE do SEEU e ficha do SIAPEN para o APTO; leitura da Mesa, do SEI e da fila do SAP pedida pelo APTO (só leitura).",
   "minimum_chrome_version": "116",
   "permissions": [
     "downloads",
-    "storage"
+    "storage",
+    "offscreen"
   ],
   "host_permissions": [
     "https://seeu.pje.jus.br/*",
@@ -21,6 +22,7 @@
     "service_worker": "background.js",
     "scripts": [
       "comum.js",
+      "painel/painel_bg.js",
       "background.js"
     ]
   },
@@ -95,6 +97,17 @@
         "seeu_aba.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://seeu.pje.jus.br/seeu/*"
+      ],
+      "js": [
+        "comum.js",
+        "painel/painel_seeu.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_idle"
     }
   ],
   "action": {
@@ -113,7 +126,7 @@
     "128": "icones/128.png"
   },
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'none'; connect-src 'self' https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:* https:"
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'none'; connect-src 'self' https://seeu.pje.jus.br https://seeu-transfer.s3.sa-east-1.amazonaws.com https://seeu-transfer.s3.amazonaws.com http://127.0.0.1:* https:"
   },
   "browser_specific_settings": {
     "gecko": {
@@ -132,6 +145,19 @@
       ],
       "matches": [
         "https://sei.defensoria.ms.def.br/*"
+      ]
+    },
+    {
+      "resources": [
+        "painel/painel.html",
+        "painel/painel.css",
+        "painel/painel.js",
+        "painel/painel_core.js",
+        "painel/painel_resumo.js",
+        "painel/*.ttf"
+      ],
+      "matches": [
+        "https://seeu.pje.jus.br/*"
       ]
     }
   ]

@@ -19,18 +19,23 @@ def ok(cond, msg):
 
 m = json.load(open(os.path.join(EXT, "manifest.json"), encoding="utf-8"))
 ok(m["manifest_version"] == 3, "manifesto v3")
-ok(sorted(m["permissions"]) == ["downloads", "storage"], "permissões mínimas: %s" % m["permissions"])
+ok(sorted(m["permissions"]) == ["downloads", "offscreen", "storage"], "permissões mínimas (offscreen: o motor do painel, 1.15): %s" % m["permissions"])
 ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://seeu-transfer.s3.sa-east-1.amazonaws.com/*", "https://seeu-transfer.s3.amazonaws.com/*",
                              "https://app.siapen.ms.gov.br/*", "https://*.defensoria.ms.def.br/*", "http://127.0.0.1:47321/*"],
    "só o SEEU (e o servidor de arquivos do SEEU), o SIAPEN, o SAP da Defensoria e o APTO deste computador: %s" % m["host_permissions"])
 ok([c["matches"] for c in m["content_scripts"]] == [["https://seeu.pje.jus.br/seeu/*"], ["https://app.siapen.ms.gov.br/*"], ["https://app.siapen.ms.gov.br/*"],
-                                                   ["https://*.defensoria.ms.def.br/sap/*"], ["https://*.defensoria.ms.def.br/sap/*"], ["https://sei.defensoria.ms.def.br/sei/*"], ["https://seeu.pje.jus.br/seeu/*"]],
+                                                   ["https://*.defensoria.ms.def.br/sap/*"], ["https://*.defensoria.ms.def.br/sap/*"], ["https://sei.defensoria.ms.def.br/sei/*"], ["https://seeu.pje.jus.br/seeu/*"],
+                                                   ["https://seeu.pje.jus.br/seeu/*"]],
    "scripts só no SEEU, no SIAPEN, no SAP e no SEI da Defensoria")
 ok(m["content_scripts"][5]["js"] == ["sei_aba.js"], "SEI: endereço do Controle de Processos e o botão Ler o SEI do APTO")
 ok(m["content_scripts"][6]["js"] == ["seeu_aba.js"], "SEEU: o botão Ler a Mesa do APTO (abre a triagem)")
-ok(m.get("web_accessible_resources") == [{"resources": ["sei/lib/*.js"], "matches": ["https://sei.defensoria.ms.def.br/*"]}], "só o leitor do SEI, só para o SEI da Defensoria")
+ok(m.get("web_accessible_resources") == [{"resources": ["sei/lib/*.js"], "matches": ["https://sei.defensoria.ms.def.br/*"]},
+   {"resources": ["painel/painel.html", "painel/painel.css", "painel/painel.js", "painel/painel_core.js", "painel/painel_resumo.js", "painel/*.ttf"], "matches": ["https://seeu.pje.jus.br/*"]}],
+   "só o leitor do SEI, só para o SEI da Defensoria; só a página do painel, só para o SEEU (1.15)")
+ok(m["content_scripts"][7]["js"] == ["comum.js", "painel/painel_seeu.js"], "SEEU: o painel do APTO na página do processo (1.15)")
+ok("script-src 'self' 'wasm-unsafe-eval';" in m["content_security_policy"]["extension_pages"], "só o WebAssembly do motor a mais no CSP (sem eval)")
 ok(m["content_scripts"][4]["js"] == ["atd_comum.js", "atd_sap.js"], "SAP: atendimentos (fila e Fato Narrado para o APTO)")
-ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None, None, None, None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
+ok([c.get("world") for c in m["content_scripts"]] == [None, None, "MAIN", None, None, None, None, None] and m["content_scripts"][2]["js"] == ["siapen_pagina.js"],
    "só o siapen_pagina.js roda no mundo da página")
 # SAP: só leitura - a lupa "Visualizar" (designar=0) é o único botão de linha clicado; nunca "Designar Assistido"
 sap = open(os.path.join(EXT, "sap.js"), encoding="utf-8").read()

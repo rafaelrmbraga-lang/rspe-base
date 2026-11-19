@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>APTO - análise do processo</title><link rel="stylesheet" href="painel.css"></head>
+<body>
+<aside class="painel" aria-label="Análise do APTO">
+  <header class="p-head">
+    <span class="marca">APTO</span>
+    <span class="quem"><span class="n" id="nome"></span><span class="p" id="proc"></span></span>
+    <button class="btn-ic" id="atualizar" type="button" aria-label="Ler o processo de novo" title="Ler de novo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="btn-ic" id="recolher" type="button" aria-label="Recolher o painel (Esc)" title="Recolher (Esc)"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </header>
+  <main class="corpo" id="corpo" aria-live="polite"></main>
+  <input type="file" id="arquivoFicha" accept="application/pdf,.pdf" hidden>
+  <div class="soltar" id="soltar" hidden>Solte aqui o PDF da ficha disciplinar do SIAPEN<br><small style="font-weight:400">a ficha só é lida neste computador</small></div>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <footer class="p-pe">
+    <button class="btn" id="resumo" type="button" title="Resumo da pena em linguagem simples, para entregar ao assistido">Resumo para o assistido</button>
+    <button class="btn" id="copiar" type="button">Copiar</button>
+    <button class="btn" id="resVoltar" type="button" hidden>Voltar</button>
+    <button class="btn pri" id="resPdf" type="button" hidden disabled>Imprimir</button>
+    <span class="leg" aria-hidden="true"><span class="selo-st verde" id="lg-v"></span><span class="selo-st amarelo" id="lg-a"></span></span>
+  </footer>
+</aside>
+<script src="painel_core.js"></script>
+<script src="painel_resumo.js"></script>
+<script src="painel.js"></script>
+</body></html>

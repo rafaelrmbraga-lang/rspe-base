@@ -492,23 +492,29 @@ def extrair(caminho):
         if re.search(r"password|encrypt", "%s %s %r" % (e.__class__.__name__, e, getattr(e, "__context__", None)), re.I):
             raise ValueError("PDF protegido por senha: gere a ficha de novo no SIAPEN, sem proteção") from e
         raise
-    parcial = []
     with pdf:
-        pags = [p.extract_text() or "" for p in pdf.pages]
-        if not "".join(pags).strip():
-            raise ValueError("PDF sem texto (digitalizado ou imagem): gere o PDF direto do SEEU/SIAPEN, não escaneado")
-        if not e_ficha("\n".join(pags)):
-            raise ValueError("não é uma Ficha Disciplinar do SIAPEN")
-        dp_chars = _seguro(parcial, "cabeçalho (data da prisão pela posição)", lambda: _data_prisao_chars(pdf.pages[0]) if pdf.pages else "")
-        vis, ocultas = [], []
-        for k, p in enumerate(pdf.pages):
-            try:
-                v, o = _pagina_historico(p, k)
-            except Exception as e:
-                parcial.append("página %d: falha na separação do histórico (%s) - lido o texto corrido da página" % (k + 1, rs._falha(e)))
-                v, o = pags[k], []
-            vis.append(rs.sem_linhas_navegador(v)[0])
-            ocultas += o
+        return extrair_paginas_pdf(pdf.pages, caminho)
+
+
+def extrair_paginas_pdf(paginas, caminho=""):
+    """A leitura da ficha a partir das páginas do PDF: as do pdfplumber (APTO) ou as montadas no navegador a partir do pdf.js
+    (rspe_pdf_paginas.Pagina, painel da extensão) - a mesma leitura nos dois."""
+    parcial = []
+    pags = [p.extract_text() or "" for p in paginas]
+    if not "".join(pags).strip():
+        raise ValueError("PDF sem texto (digitalizado ou imagem): gere o PDF direto do SEEU/SIAPEN, não escaneado")
+    if not e_ficha("\n".join(pags)):
+        raise ValueError("não é uma Ficha Disciplinar do SIAPEN")
+    dp_chars = _seguro(parcial, "cabeçalho (data da prisão pela posição)", lambda: _data_prisao_chars(paginas[0]) if paginas else "")
+    vis, ocultas = [], []
+    for k, p in enumerate(paginas):
+        try:
+            v, o = _pagina_historico(p, k)
+        except Exception as e:
+            parcial.append("página %d: falha na separação do histórico (%s) - lido o texto corrido da página" % (k + 1, rs._falha(e)))
+            v, o = pags[k], []
+        vis.append(rs.sem_linhas_navegador(v)[0])
+        ocultas += o
     return _extrair_texto(caminho, pags, vis, ocultas, dp_chars, parcial)
 
 

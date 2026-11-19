@@ -1,4 +1,4 @@
-APTO - RSPE do SEEU, leitura da Mesa e do SEI, Ficha do SIAPEN, processos e atendimentos do SAP (Chrome e Edge)
+APTO - RSPE do SEEU, painel do processo, leitura da Mesa e do SEI, Ficha do SIAPEN, processos e atendimentos do SAP (Chrome e Edge)
 ======================================================================================================
 
 O QUE FAZ
@@ -9,6 +9,39 @@ de mesmo nome da subpasta, enquanto o APTO estiver aberto.
 A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI são
 lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
 SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
+
+PAINEL DO APTO NA PÁGINA DO PROCESSO (1.15) - NÃO PRECISA DO APTO
+ - Ao abrir um processo no SEEU, a análise aparece à direita, na ordem da ficha
+   do assistido: pena, marcos, benefícios e demais pontos. Verde "Confere" =
+   há certeza; amarelo "Conferir" = conferir (sem "agir já"). Cada item abre a
+   conta e o fundamento.
+ - Leitura: as abas do processo são buscadas em segundo plano, nesta mesma aba
+   e com a sua sessão (só leitura: Informações Gerais e Adicionais, Partes,
+   Processos Criminais, Eventos e Incidentes). Nada é clicado nem enviado.
+ - O cálculo é o do APTO (os mesmos arquivos, rodando dentro da extensão).
+ - O SEEU continua igual: o painel só reserva a sua largura, não abre aba nem
+   janela. "›" (ou Esc) recolhe numa lingueta na borda, com a contagem do que
+   é para conferir; clicar nela reabre. A escolha é lembrada.
+ - O resultado fica guardado por 10 minutos (só na sessão do navegador):
+   trocar de aba no SEEU não refaz a leitura. "Ler de novo" (↻) refaz.
+ - A primeira análise depois de abrir o navegador leva alguns segundos (o
+   motor é carregado uma vez); as seguintes, cerca de 1 segundo mais a
+   leitura das abas.
+ - Ficha disciplinar: "Carregar a ficha (PDF)" no painel, ou arraste o PDF
+   para ele; a ficha que você abrir no SIAPEN (com a ficha automática ligada)
+   também vale. Só é lida neste computador e só fica na sessão do navegador
+   ("Retirar" tira na hora). Só é usada se for da mesma pessoa. Sem ficha, o
+   que depende dela fica amarelo.
+ - "Resumo para o assistido": o texto em linguagem simples do APTO, para
+   conferir frase a frase. Antes de baixar o PDF, diga onde é o atendimento:
+   na unidade prisional (sai o canhoto para o assistido pedir o próximo
+   atendimento) ou fora dela (sem o canhoto). "Imprimir" abre o resumo numa
+   aba do navegador e já pede a impressão (o visualizador também deixa baixar).
+ - Liga e desliga no painel da extensão ("Mostrar o painel do APTO na página
+   do processo").
+ - Pasta motor: gerada na compilação (os mesmos .py do APTO e o Pyodide). Quem
+   usa a extensão direto do repositório roda antes:
+   python ferramentas/motor_extensao/empacotar.py
 
 LIGAÇÃO COM O APTO (automática, nada a configurar)
  - Com o APTO aberto, ele cria Downloads\APTO\<base> para cada base sua e

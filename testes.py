@@ -58,6 +58,7 @@ TESTES += ["teste_ui_718.py"]  # 7.18.0: CSS consolidado e propostas de interfac
 TESTES += ["teste_ui_funcoes.py"]  # 7.19.0: barra fixa das funções (Atendimentos, Execução, SEEU, SEI, Quadro, Relatório)
 TESTES += ["teste_atendimentos_apto.py"]  # 7.20.0: Atendimentos no APTO (base do gabinete, servidor da extensão, pedidos ao SAP)
 TESTES += ["teste_atd_sap.py"]  # 7.20.0: extensão lê a fila e o Fato Narrado do SAP para o APTO (SAP fictício)
+TESTES += ["teste_indulto_saidas_fechado.py", "teste_painel_seeu.py", "teste_seeu_abas.py", "teste_ficha_painel.py"]  # 7.32.0: saídas temporárias só "a conferir" quando o regime da data permitia; painel do APTO no SEEU e leitura das abas do SEEU
 TESTES += ["teste_ui_atendimentos.py"]  # 7.20.0: tela de Atendimentos no APTO (moldura, subabas, Word, petição, Quadro, produção do mês)
 TESTES += ["teste_nuspen_regras.py"]  # 7.21.0: regras e leitor do SEI vindos do NUSPEN, com os testes originais
 TESTES += ["teste_sei_apto.py"]  # 7.21.0: SEI no APTO, ponta a ponta com o SEI fictício
