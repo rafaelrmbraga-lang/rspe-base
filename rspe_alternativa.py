@@ -89,7 +89,7 @@ def ler(paginas):
         # nome de uma condição: linha sem rótulo seguida de "Status:"
         if ":" not in ln and nxt.startswith("Status:") and not RE_LINHA.match(ln):
             cond = {"nome": ln, "status": "", "termino_previsto": "", "termino_efetivo": "", "unidade": "", "total_previsto": None,
-                    "total_pago": None, "total_a_pagar": None, "cumprimentos": []}
+                    "total_pago": None, "total_a_pagar": None, "por_mes": None, "parcelas": None, "cumprimentos": []}
             med["condicoes"].append(cond)
             na_tabela = False
             continue
@@ -135,6 +135,12 @@ def ler(paginas):
                     cond["unidade"] = "R$"
         if re.match(r"Qtde de Horas", ln) and not cond["unidade"]:
             cond["unidade"] = "h"
+        v = _campo(ln, "Qtde de Horas por Mês")
+        if v is not None:
+            cond["por_mes"] = _n(v)
+        v = _campo(ln, "Nº de Parcelas Previsto")
+        if v is not None and re.match(r"\d+$", v):
+            cond["parcelas"] = int(v)
     return out
 
 
@@ -145,6 +151,15 @@ def _br(v, unidade):
         return "R$ " + ("{:,.2f}".format(v)).replace(",", "X").replace(".", ",").replace("X", ".")
     s = ("%.2f" % v).rstrip("0").rstrip(".")
     return s.replace(".", ",") + " h"
+
+
+def _saldo(resta, atraso, un):
+    """O que falta cumprir da condição (o saldo do relatório: "Total A Pagar") e, se houver, quanto disso já venceu."""
+    if resta is None:
+        return ("%s em atraso" % _br(atraso, un)) if atraso > 0.005 else "em dia"
+    if resta <= 0.005:
+        return "cumprida"
+    return "faltam %s" % _br(resta, un) + (" · %s em atraso" % _br(atraso, un) if atraso > 0.005 else " · em dia")
 
 
 def avaliar(rel, hoje):
@@ -161,12 +176,18 @@ def avaliar(rel, hoje):
             st = (c.get("status") or "").upper()
             conta, pend = [], []
             tp, tr = c.get("total_previsto"), c.get("total_pago")
+            # o SEEU não imprime o previsto nas linhas ainda não cumpridas (só a data e "Sim"): vale o previsto da condição - as horas
+            # por mês, ou o total dividido pelas parcelas -, e na falta deles o valor mais comum das linhas que o trazem
+            conhecidos = [x["previsto"] for x in cs if x["previsto"]]
+            padrao = c.get("por_mes") or ((tp / c["parcelas"]) if tp and c.get("parcelas") else None) or \
+                (max(set(conhecidos), key=conhecidos.count) if conhecidos else None)
+            prev = lambda x: x["previsto"] if x["previsto"] is not None else (padrao or 0)
             pct = round(100 * tr / tp) if tp and tr is not None else None
             if un == "R$":
                 sem = [x for x in venc if not x["efetiva"] and not x["realizado"]]
-                menor = [x for x in venc if x["realizado"] is not None and x["previsto"] and x["realizado"] < x["previsto"] - 0.005]
-                dif = sum(x["previsto"] - x["realizado"] for x in menor)
-                deve = sum(x["previsto"] or 0 for x in sem) + dif
+                menor = [x for x in venc if x["realizado"] is not None and prev(x) and x["realizado"] < prev(x) - 0.005]
+                dif = sum(prev(x) - x["realizado"] for x in menor)
+                deve = sum(prev(x) for x in sem) + dif
                 if sem:
                     pend.append("%d %s vencida%s sem pagamento (%s)" % (len(sem), "parcela" if len(sem) == 1 else "parcelas", "" if len(sem) == 1 else "s",
                                                                        ", ".join(x["prevista"] for x in sem[:6]) + ("…" if len(sem) > 6 else "")))
@@ -176,9 +197,10 @@ def avaliar(rel, hoje):
                 conta.append("Total previsto %s; pago %s; a pagar %s" % (_br(tp, un), _br(tr, un), _br(c.get("total_a_pagar"), un)))
                 if deve > 0.005:
                     conta.append("Em atraso até %s: %s" % (date.strftime(hoje, "%d/%m/%Y"), _br(deve, un)))
-                valor = ("%s em atraso" % _br(deve, un)) if deve > 0.005 else "em dia"
+                resta = c.get("total_a_pagar") if c.get("total_a_pagar") is not None else (max(0.0, tp - (tr or 0)) if tp else None)
+                valor = _saldo(resta, deve, un)
             elif un == "h":
-                devidas = sum(x["previsto"] or 0 for x in venc)
+                devidas = sum(prev(x) for x in venc)
                 feitas = sum(x["realizado"] or 0 for x in cs)
                 sem = [x for x in venc if not x["efetiva"] and not x["realizado"]]
                 deficit = max(0.0, devidas - feitas)
@@ -188,7 +210,8 @@ def avaliar(rel, hoje):
                     pend.append("%s vencido%s sem registro de horas (%s)" % ("1 mês" if len(sem) == 1 else "%d meses" % len(sem), "" if len(sem) == 1 else "s",
                                                                            ", ".join(x["prevista"] for x in sem[:6]) + ("…" if len(sem) > 6 else "")))
                 conta.append("Total previsto %s; cumprido %s; a cumprir %s" % (_br(tp, un), _br(tr, un), _br(c.get("total_a_pagar"), un)))
-                valor = ("%s em atraso" % _br(deficit, un)) if deficit > 0.005 else ("%s cumpridas" % _br(feitas, un))
+                resta = c.get("total_a_pagar") if c.get("total_a_pagar") is not None else (max(0.0, tp - feitas) if tp else None)
+                valor = _saldo(resta, deficit, un) if resta is not None else (("%s em atraso" % _br(deficit, un)) if deficit > 0.005 else "%s cumpridas" % _br(feitas, un))
             else:
                 sem = [x for x in venc if not x["efetiva"]]
                 if sem:

@@ -2,7 +2,7 @@
 // baixaria (um GET com a sessão de quem está logado) e mostra: PDF desenhado pelo pdf.js da extensão (página a página, até 12),
 // HTML num quadro isolado (sem scripts), imagem como imagem. Nada é gravado nem enviado.
 const SEEU = "https://seeu.pje.jus.br";
-const MAX_PAG = 12;
+const MAX_PAG = location.hash.includes("doc=") ? 300 : 12;
 const $p = document.getElementById("paginas");
 let pdfjs = null, atual = 0, ultimo = null;
 
@@ -78,4 +78,19 @@ async function mostrar(u, vez) {
     msg("Não foi possível mostrar a prévia", "Clique no link para baixar o arquivo.");
   }
 }
-parent.postMessage({ apto: "previaPronta" }, SEEU);
+const doc = (location.hash.match(/doc=([\w]+)/) || [])[1];
+if (doc) {
+  // janela do documento (2º monitor): a extensão busca o arquivo do SEEU e a página o mostra inteiro
+  document.documentElement.classList.add("janela");
+  (async () => {
+    const r = await chrome.runtime.sendMessage({ tipo: "docBytes", id: doc }).catch(() => null);
+    if (!r || !r.ok) return msg("Não foi possível abrir o documento", (r && r.erro) || "");
+    document.title = (r.nome || "Documento") + " - SEEU";
+    const bin = atob(r.b64), b = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+    ultimo = { bytes: b, tipo: String(r.tipo || "").toLowerCase() };
+    mostrar(ultimo);
+  })();
+} else {
+  parent.postMessage({ apto: "previaPronta" }, SEEU);
+}

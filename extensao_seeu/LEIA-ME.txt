@@ -10,7 +10,7 @@ A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI s
 lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
 SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
 
-PAINEL DO APTO NA PÁGINA DO PROCESSO (1.19) - NÃO PRECISA DO APTO
+PAINEL DO APTO NA PÁGINA DO PROCESSO (1.20) - NÃO PRECISA DO APTO
  - Ao abrir um processo no SEEU, a análise aparece à direita, na ordem da ficha
    do assistido: pena, marcos, benefícios e demais pontos. Verde "Confere" =
    há certeza; amarelo "Conferir" = conferir (sem "agir já"). Cada item abre a
@@ -36,13 +36,12 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.19) - NÃO PRECISA DO APTO
  - Barra fixa (1.18): clicar no nº ou no nome copia. Saída temporária e
    progressão antecipada: ao passar o mouse (ou com o foco do teclado), o
    checklist dos requisitos (✓ atendido, ✗ não atendido, ? a conferir).
- - Destaques das movimentações (1.18): na aba Movimentações, cada evento é
-   classificado pelo conteúdo, e não só por quem movimentou - decisão,
-   despacho, MP, Defensoria, unidade prisional, audiência, parte - com cor e
-   etiqueta; a rotina do cartório (recebidos, intimação confirmada, remessas,
-   conclusos, ato ordinatório, ciência, prazo decorrido) fica esmaecida. A
-   barra acima da tabela filtra por categoria (com as contagens) e esmaece,
-   oculta ou mostra a rotina; a escolha é lembrada.
+ - Destaques das movimentações (1.20): na aba Movimentações, cada evento é
+   classificado pelo conteúdo, e não só por quem movimentou: decisão (azul),
+   despacho (azul claro), MP (vermelho), DPE (verde), ADV (roxo),
+   Depen/unidade prisional (amarelo), cartório (laranja), audiência. Esmaecer
+   ou ocultar vale só para o que não tem arquivo vinculado. A barra acima da
+   tabela filtra por categoria (com as contagens); a escolha é lembrada.
  - ANPP, transação penal e suspensão condicional do processo (1.18): pelo
    assunto principal da capa do SEEU, o painel reconhece a medida sem
    condenação e não aponta "sem condenação" nem "não iniciou"; mostra o que
@@ -51,14 +50,19 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.19) - NÃO PRECISA DO APTO
    Prisão (N)" na página, o painel lê a aba em segundo plano e gera o
    relatório de cada medida (o mesmo "Gerar Relatório" da aba). Cada condição
    vira um cartão: prestação pecuniária (parcelas vencidas sem pagamento e
-   pagas a menor, com o valor em atraso), prestação de serviços (horas
-   devidas até hoje x cumpridas, meses sem registro) e as demais (vencidos
+   pagas a menor), prestação de serviços (horas devidas até hoje x
+   cumpridas, meses sem registro) - o cartão traz o que falta cumprir (o
+   saldo do relatório) e quanto disso já venceu e as demais (vencidos
    sem registro); status "verificar" do SEEU fica a conferir. O chip mostra
    "Restritiva de direitos" no lugar de "Aberto (não iniciado)".
  - Prévia dos documentos (1.19): parar o mouse (ou o foco do teclado) sobre
    o link de um documento do SEEU (ex.: "online.pdf" no detalhe da
    movimentação) abre a prévia ao lado, sem nova aba; "Expandir" amplia a
-   prévia na página (sem cobrir o painel); Esc ou ✕ fecha.
+   prévia na página (sem cobrir o painel); Esc ou ✕ fecha. A extensão busca
+   o documento (o SEEU o entrega pelo servidor de arquivos).
+ - Documentos no 2º monitor (1.20, opção no ícone da extensão): clicar no
+   link de um documento abre-o numa janela no outro monitor (a mesma janela é
+   reaproveitada a cada documento).
  - "Copiar fundamento" copia o texto corrido, pronto para a petição (sem as
    marcas do painel), com a base legal no fim.
  - Alertas: indulto ou comutação já decididos no SEEU (concedido ou

@@ -19,7 +19,8 @@ def ok(cond, msg):
 
 m = json.load(open(os.path.join(EXT, "manifest.json"), encoding="utf-8"))
 ok(m["manifest_version"] == 3, "manifesto v3")
-ok(sorted(m["permissions"]) == ["downloads", "offscreen", "storage"], "permissões mínimas (offscreen: o motor do painel, 1.15): %s" % m["permissions"])
+ok(sorted(m["permissions"]) == ["downloads", "offscreen", "storage", "system.display"],
+   "permissões mínimas (offscreen: o motor do painel, 1.15; system.display: abrir documento no 2º monitor, 1.20): %s" % m["permissions"])
 ok(m["host_permissions"] == ["https://seeu.pje.jus.br/*", "https://seeu-transfer.s3.sa-east-1.amazonaws.com/*", "https://seeu-transfer.s3.amazonaws.com/*",
                              "https://app.siapen.ms.gov.br/*", "https://*.defensoria.ms.def.br/*", "http://127.0.0.1:47321/*"],
    "só o SEEU (e o servidor de arquivos do SEEU), o SIAPEN, o SAP da Defensoria e o APTO deste computador: %s" % m["host_permissions"])

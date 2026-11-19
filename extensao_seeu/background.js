@@ -13,7 +13,7 @@ const A = self.APTO;
 const AUTO = "@apto";            // base de destino = a base aberta no APTO
 // rspeAuto: baixa o RSPE sozinho ao abrir um processo (e ao abrir "Situação Carcerária"); desligado, só o botão do painel e o lote baixam
 // fichaAuto: grava sozinha a ficha do SIAPEN que a pessoa abre na tela; desligado, só o botão do painel e o lote gravam
-const PADRAO = { ativo: true, rspeAuto: true, fichaAuto: true, painel: true, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
+const PADRAO = { ativo: true, rspeAuto: true, fichaAuto: true, painel: true, docMonitor2: false, raiz: "APTO", base: AUTO, bases: [], avisoNaPagina: true };
 const APTO_URL = "http://127.0.0.1:47321/apto"; // o APTO aberto informa as bases e a base aberta (só neste computador)
 const INTERVALO_MS = 4000;      // mínimo entre dois downloads
 const TETO_HORA = 40;           // downloads automáticos por hora (ao abrir processos)
@@ -562,6 +562,56 @@ async function atdMensagem(msg, sender) {
   return { ok: false };
 }
 
+// ---------- documentos do SEEU (arquivo.do -> servidor de arquivos): só leitura, só o SEEU e o servidor de arquivos do SEEU
+const MAX_DOC = 25 * 1024 * 1024;
+function arquivoPermitido(u) {
+  try { const x = new URL(u); return x.origin === "https://seeu.pje.jus.br" && /^\/seeu\/arquivo\.do$/i.test(x.pathname); } catch (e) { return false; }
+}
+async function arquivoSeeu(url) {
+  if (!arquivoPermitido(url)) return { ok: false, erro: "endereço fora dos documentos do SEEU" };
+  let r;
+  try { r = await fetch(url, { credentials: "include", cache: "no-store" }); } catch (e) { return { ok: false, erro: "o SEEU não respondeu" }; }
+  const fim = new URL(r.url || url);
+  if (!/^(seeu\.pje\.jus\.br|seeu-transfer\.s3(\.sa-east-1)?\.amazonaws\.com)$/.test(fim.hostname)) return { ok: false, erro: "o documento veio de outro endereço" };
+  if (!r.ok) return { ok: false, erro: "o SEEU respondeu " + r.status };
+  const buf = new Uint8Array(await r.arrayBuffer());
+  if (buf.length > MAX_DOC) return { ok: false, erro: "arquivo grande demais para a prévia" };
+  let bin = "";
+  for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  return { ok: true, b64: btoa(bin), tipo: r.headers.get("content-type") || "" };
+}
+// abrir o documento numa janela no 2º monitor (se houver; senão, numa janela à parte): a mesma janela é reaproveitada
+async function abrirDocMonitor2(url, nome, sender) {
+  if (!arquivoPermitido(url)) return { ok: false };
+  const id = Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  await chrome.storage.session.set({ ["doc:" + id]: { url, nome: String(nome || "").slice(0, 120) } });
+  const destino = chrome.runtime.getURL("painel/previa.html#doc=" + id);
+  const { docJanela } = await chrome.storage.session.get("docJanela");
+  if (docJanela) {
+    try {
+      const w = await chrome.windows.get(docJanela.janela, { populate: true });
+      const t = (w.tabs || [])[0];
+      if (t) { await chrome.tabs.update(t.id, { url: destino }); await chrome.windows.update(w.id, { focused: true }); return { ok: true, reaproveitada: true }; }
+    } catch (e) { /* a janela foi fechada */ }
+  }
+  let area = null;
+  try {
+    if (chrome.system && chrome.system.display) {
+      const telas = await chrome.system.display.getInfo();
+      const atual = sender.tab ? await chrome.windows.get(sender.tab.windowId) : null;
+      const dentro = (t) => atual && atual.left >= t.bounds.left - 50 && atual.left < t.bounds.left + t.bounds.width;
+      const outra = telas.find((t) => !dentro(t) && !t.isPrimary) || telas.find((t) => !dentro(t)) || null;
+      if (outra) area = outra.workArea;
+    }
+  } catch (e) { area = null; }
+  const op = { url: destino, type: "normal", focused: true };
+  if (area) Object.assign(op, { left: area.left, top: area.top, width: area.width, height: area.height });
+  const w = await chrome.windows.create(op);
+  if (area) { try { await chrome.windows.update(w.id, { state: "maximized" }); } catch (e) { /* segue */ } }
+  await chrome.storage.session.set({ docJanela: { janela: w.id } });
+  return { ok: true, monitor2: !!area };
+}
+
 chrome.runtime.onMessage.addListener((msg, sender, responder) => {
   (async () => {
     try {
@@ -585,6 +635,14 @@ chrome.runtime.onMessage.addListener((msg, sender, responder) => {
         return responder(await gravarFicha(msg, sender));
       }
       if (msg.tipo === "cfg") return responder(await cfg());
+      // documento do SEEU (arquivo.do): o SEEU redireciona para o servidor de arquivos (S3), que a página não lê; a extensão busca
+      // com a sessão do SEEU e devolve os bytes - para a prévia ao passar o mouse e para a janela no 2º monitor
+      if (sender.tab && doSeeu(sender.url) && msg.tipo === "seeuArquivo") return responder(await arquivoSeeu(msg.url));
+      if (sender.tab && doSeeu(sender.url) && msg.tipo === "seeuAbrirDoc") return responder(await abrirDocMonitor2(msg.url, msg.nome, sender));
+      if (sender.id === chrome.runtime.id && String(sender.url || "").startsWith(chrome.runtime.getURL("painel/previa.html")) && msg.tipo === "docBytes") {
+        const d = (await chrome.storage.session.get("doc:" + msg.id))["doc:" + msg.id];
+        return responder(d ? Object.assign(await arquivoSeeu(d.url), { nome: d.nome }) : { ok: false, erro: "documento não encontrado" });
+      }
       if (daPagina && msg.tipo === "podeBaixar") {
         const r = await podeBaixarAgora(A.cnj(msg.processo), msg.forcar, msg.lote);
         return responder({ ok: r.ok, motivo: r.motivo, repetido: r.repetido });

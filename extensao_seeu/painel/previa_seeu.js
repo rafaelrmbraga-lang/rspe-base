@@ -9,7 +9,7 @@
   window.__aptoPrevia = true;
   if (window.name === "apto-triagem-oculta") return;
   const ORIGEM = chrome.runtime.getURL("").replace(/\/$/, "");
-  const ESPERA_MS = 450, FECHA_MS = 350, LARG = 560, MAX_CACHE = 8, MAX_BYTES = 25 * 1024 * 1024;
+  const ESPERA_MS = 450, FECHA_MS = 350, LARG = 560, MAX_CACHE = 8;
   const cache = new Map();
   let host, raiz, quadro, moldura, titulo, expandir, grande = false, pronta = false, fila = null, linkAtual = null, tAbrir = 0, tFechar = 0, ligado = true;
 
@@ -93,16 +93,15 @@
     quadro.style.top = Math.max(12, y) + "px";
   }
 
+  // o arquivo.do do SEEU redireciona para o servidor de arquivos (S3), que a página não pode ler: quem busca é a extensão
   async function bytesDe(url) {
     if (cache.has(url)) return cache.get(url);
     const p = (async () => {
-      const r = await fetch(url, { credentials: "include", cache: "no-store" });
-      if (!r.ok) throw new Error("o SEEU respondeu " + r.status);
-      const tam = +(r.headers.get("content-length") || 0);
-      if (tam > MAX_BYTES) throw new Error("arquivo grande demais para a prévia");
-      const buf = await r.arrayBuffer();
-      if (buf.byteLength > MAX_BYTES) throw new Error("arquivo grande demais para a prévia");
-      return { buf, tipo: r.headers.get("content-type") || "" };
+      const r = await chrome.runtime.sendMessage({ tipo: "seeuArquivo", url });
+      if (!r || !r.ok) throw new Error((r && r.erro) || "a extensão não respondeu");
+      const bin = atob(r.b64), b = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) b[i] = bin.charCodeAt(i);
+      return { buf: b.buffer, tipo: r.tipo || "" };
     })();
     cache.set(url, p);
     p.catch(() => cache.delete(url));
@@ -158,5 +157,21 @@
   document.addEventListener("focusout", (e) => { if (ehArquivo(e.target)) { clearTimeout(tAbrir); if (linkAtual && !grande) agendarFechar(); } });
   document.addEventListener("keydown", (e) => { if (e.key === "Escape" && linkAtual) fechar(); });
   window.addEventListener("scroll", () => { if (linkAtual) posicionar(linkAtual); }, { passive: true });
-  chrome.runtime.sendMessage({ tipo: "cfg" }).then((c) => { if (c && (c.painel === false || c.ativo === false)) ligado = false; }).catch(() => {});
+  // opção "abrir os documentos no 2º monitor": o clique no link abre o documento numa janela no outro monitor (a mesma janela
+  // é reaproveitada), em vez de baixar ou abrir aba nesta janela
+  let monitor2 = false;
+  document.addEventListener("click", (e) => {
+    if (!monitor2 || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    const a = e.target.closest && e.target.closest("a");
+    if (!ehArquivo(a)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    fechar();
+    chrome.runtime.sendMessage({ tipo: "seeuAbrirDoc", url: a.href, nome: (a.textContent || "").trim() }).catch(() => {});
+  }, true);
+  chrome.runtime.sendMessage({ tipo: "cfg" }).then((c) => {
+    if (c && (c.painel === false || c.ativo === false)) ligado = false;
+    monitor2 = !!(c && c.docMonitor2);
+  }).catch(() => {});
+  chrome.storage.onChanged.addListener((ch, area) => { if (area === "local" && ch.cfg && ch.cfg.newValue) monitor2 = !!ch.cfg.newValue.docMonitor2; });
 })();

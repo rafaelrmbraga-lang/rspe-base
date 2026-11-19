@@ -1,8 +1,8 @@
 // APTO - destaques da aba Movimentações do SEEU. O realce do próprio SEEU colore por QUEM movimentou; aqui, a classificação é pelo
 // CONTEÚDO do evento (APTO_PAINEL_CORE.classificarMov): decisões, despachos, MP, Defensoria, unidade prisional, audiências e partes
-// ganham cor e etiqueta; a rotina do cartório (recebidos, intimação confirmada, remessas, conclusos, ato ordinatório, ciência,
-// prazo decorrido...) fica esmaecida - ou oculta, se a pessoa escolher. Uma barra acima da tabela filtra por categoria, com as
-// contagens. Só acrescenta classes e a barra: não muda o conteúdo, os links nem os filtros do SEEU. A escolha fica lembrada.
+// ganham cor e etiqueta (decisão azul, despacho azul claro, MP vermelho, Defensoria verde, advogado roxo, Depen amarelo, cartório
+// laranja); o que não tem arquivo vinculado fica esmaecido - ou oculto, se a pessoa escolher. Uma barra acima da tabela filtra por
+// categoria, com as contagens. Só acrescenta classes e a barra: não muda o conteúdo, os links nem os filtros do SEEU. A escolha fica lembrada.
 (function () {
   "use strict";
   if (window.__aptoMovs) return;
@@ -12,14 +12,15 @@
   const C = self.APTO_PAINEL_CORE;
   if (!C || !C.classificarMov) return;
 
-  const COR = {   // barra à esquerda, fundo da linha, etiqueta (fundo, texto)
-    decisao: ["#1F4E8C", "#EDF3FB", "#1F4E8C", "#fff", "Decisão"],
-    despacho: ["#8FB0DA", "", "#DCE7F5", "#1A3F70", "Despacho"],
-    mp: ["#6B3FA0", "#F6F1FC", "#6B3FA0", "#fff", "MP"],
-    defensoria: ["#1D7A4A", "#EEF7F1", "#1D7A4A", "#fff", "Defensoria"],
-    unidade: ["#A35B0B", "#FDF4EA", "#A35B0B", "#fff", "Unidade prisional"],
+  const COR = {   // barra à esquerda, fundo da linha, etiqueta (fundo, texto), nome
+    decisao: ["#1F4E8C", "#E8F0FB", "#1F4E8C", "#fff", "Decisão"],
+    despacho: ["#5B9BD5", "#F1F7FD", "#D6E7F7", "#173F6B", "Despacho"],
+    mp: ["#B3261E", "#FCEDEC", "#B3261E", "#fff", "MP"],
+    defensoria: ["#1D7A4A", "#EAF6EF", "#1D7A4A", "#fff", "DPE"],
+    advogado: ["#6B3FA0", "#F4EFFB", "#6B3FA0", "#fff", "ADV"],
+    unidade: ["#C99A06", "#FFF8DC", "#F2D35B", "#4D3B00", "Depen"],
+    cartorio: ["#D9661F", "#FDF1E8", "#F6CDAF", "#6B2C05", "Cartório"],
     audiencia: ["#0E7490", "#EAF6F9", "#0E7490", "#fff", "Audiência"],
-    parte: ["#5C636A", "", "#E3E6E8", "#2B3035", "Parte"],
   };
   const css = Object.entries(COR).map(([k, [bar, bg, tb, tc]]) =>
     `tr[data-apto-mov="${k}"]>td:first-child{box-shadow:inset 4px 0 0 ${bar}}` +
@@ -27,12 +28,12 @@
     `tr[data-apto-mov="${k}"] .apto-tag{background:${tb};color:${tc}}`).join("\n") + `
     .apto-tag{display:inline-block;margin:0 6px 2px 0;padding:1px 7px;border-radius:999px;font:700 10.5px/1.5 "Source Sans 3","Segoe UI",system-ui,sans-serif;
       letter-spacing:.02em;vertical-align:1px;white-space:nowrap}
-    table.apto-movs.apto-esmaecer tr[data-apto-mov="rotina"]>td{opacity:.45}
-    table.apto-movs.apto-esmaecer tr[data-apto-mov="rotina"]:hover>td{opacity:1}
+    table.apto-movs.apto-esmaecer tr[data-apto-arq="0"]>td{opacity:.45}
+    table.apto-movs.apto-esmaecer tr[data-apto-arq="0"]:hover>td{opacity:1}
     table.apto-movs tr.apto-oculta,table.apto-movs tr.apto-oculta+tr[id^="rowmov"]{display:none!important}`;
 
   const ROT = Object.fromEntries(C.CAT_MOV);
-  let pref = { so: [], rotina: "esmaecer" };   // so: categorias escolhidas (vazio = todas); rotina: esmaecer | ocultar | mostrar
+  let pref = { so: [], rotina: "esmaecer" };   // so: categorias escolhidas (vazio = todas); rotina (sem arquivo vinculado): esmaecer | ocultar | mostrar
 
   function linhas(tab) {
     return [...tab.querySelectorAll("tbody > tr[id^='mov']")];
@@ -47,6 +48,10 @@
       const cargo = (tds[5] && tds[5].querySelector("font b") || {}).textContent || "";
       const cat = C.classificarMov(grupos, titulo, cargo);
       tr.dataset.aptoMov = cat;
+      // arquivo vinculado: o "+" que abre os documentos (o SEEU marca SEMARQUIVO no id da linha quando não há)
+      const temArq = !grupos.map((x) => x.toUpperCase()).includes("SEMARQUIVO") && !!tr.querySelector("img[onclick*='showDetail'], a[class^='linkArquivos'], a[href*='arquivo.do']");
+      tr.dataset.aptoArq = temArq ? "1" : "0";
+      n._sem = (n._sem || 0) + (temArq ? 0 : 1);
       n[cat] = (n[cat] || 0) + 1;
       if (COR[cat] && b && !b.querySelector(".apto-tag")) {
         const t = document.createElement("span");
@@ -62,8 +67,7 @@
     tab.classList.toggle("apto-esmaecer", pref.rotina === "esmaecer");
     for (const tr of linhas(tab)) {
       const c = tr.dataset.aptoMov;
-      const fora = c === "rotina" ? pref.rotina === "ocultar" || (pref.so.length > 0 && !pref.so.includes("rotina"))
-        : pref.so.length > 0 && !pref.so.includes(c);
+      const fora = (tr.dataset.aptoArq === "0" && pref.rotina === "ocultar") || (pref.so.length > 0 && !pref.so.includes(c));
       tr.classList.toggle("apto-oculta", fora);
     }
   }
@@ -73,8 +77,8 @@
     host.id = "apto-movs";
     host.style.cssText = "all:initial;display:block;margin:8px 0";
     const raiz = host.attachShadow({ mode: "open" });
-    const total = Object.values(n).reduce((a, b) => a + b, 0);
-    const chips = C.CAT_MOV.filter(([k]) => n[k] && k !== "rotina").map(([k, r]) => {
+    const total = Object.entries(n).filter(([k]) => k !== "_sem").reduce((a, [, b]) => a + b, 0);
+    const chips = C.CAT_MOV.filter(([k]) => n[k]).map(([k, r]) => {
       const cor = COR[k] ? COR[k][0] : "#5C636A";
       return `<button type="button" class="ch" data-cat="${k}" aria-pressed="false" style="--c:${cor}"><i aria-hidden="true"></i>${r}<b>${n[k]}</b></button>`;
     }).join("");
@@ -104,7 +108,7 @@
     <div class="bx" role="group" aria-label="Destaques do APTO nas movimentações">
       <span class="t">Destaques do APTO</span>${chips}
       <span class="sep" aria-hidden="true"></span>
-      <span class="r" id="rl">Rotina do cartório (${n.rotina || 0} de ${total}):</span>
+      <span class="r" id="rl">Sem arquivo vinculado (${n._sem || 0} de ${total}):</span>
       <span class="seg" role="group" aria-labelledby="rl">
         <button type="button" data-rot="esmaecer">Esmaecer</button><button type="button" data-rot="ocultar">Ocultar</button><button type="button" data-rot="mostrar">Mostrar</button>
       </span>

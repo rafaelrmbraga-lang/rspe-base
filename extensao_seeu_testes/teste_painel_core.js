@@ -43,9 +43,11 @@ ok(/aria-describedby="req-l0"/.test(pq) && /<span class="pop" role="tooltip" id=
 // movimentações: pelo conteúdo do evento
 const M = (g, t, c) => C.classificarMov(g, t, c || "");
 ok(M(["JUIZ"], "CONCEDIDA PROGRESSÃO DE REGIME") === "decisao" && M(["JUIZ"], "PROFERIDO DESPACHO DE MERO EXPEDIENTE") === "despacho", "movimentações: decisão e despacho");
-ok(M(["PROMOTOR"], "JUNTADA DE MANIFESTAÇÃO") === "mp" && M(["PROMOTOR", "SEMARQUIVO"], "CONFIRMADA A INTIMAÇÃO ELETRÔNICA") === "rotina", "movimentações: MP fala x MP só confirma intimação");
+ok(M(["PROMOTOR"], "JUNTADA DE MANIFESTAÇÃO") === "mp" && M(["PROMOTOR", "SEMARQUIVO"], "CONFIRMADA A INTIMAÇÃO ELETRÔNICA") === "cartorio", "movimentações: MP fala x MP só confirma intimação");
 ok(M(["DEFENSOR"], "JUNTADA DE MANIFESTAÇÃO") === "defensoria" && M(["OUTROS"], "JUNTADA DE OFÍCIO - DEPEN", "Depen/Seap") === "unidade", "movimentações: Defensoria e unidade prisional");
-ok(M(["SERVIDOR"], "REMETIDOS OS AUTOS PARA DEPEN") === "rotina" && M(["JUIZ"], "RETIFICADO O MOVIMENTO CONCLUSOS PARA DECISÃO") === "rotina", "movimentações: rotina do cartório");
+ok(M(["SERVIDOR"], "REMETIDOS OS AUTOS PARA DEPEN") === "cartorio" && M(["JUIZ"], "RETIFICADO O MOVIMENTO CONCLUSOS PARA DECISÃO") === "cartorio" &&
+  M(["SERVIDOR"], "JUNTADA DE GUIA DE RECOLHIMENTO - CARTA DE GUIA") === "cartorio", "movimentações: cartório (laranja)");
+ok(M(["ADVOGADO"], "JUNTADA DE PETIÇÃO DE MANIFESTAÇÃO") === "advogado" && M(["OUTROS"], "JUNTADA DE PETIÇÃO DE INICIAL") === "advogado", "movimentações: advogado (roxo)");
 ok(/data-abrir="1"[^>]*>[\s\S]*?conferir<\/button>/.test(ch) === !!res.painel.contagem.amarelo, "chip do que falta conferir abre o painel");
 ok(!C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { nome: "<b>x</b>" }) }), true).includes("<b>x</b>"), "chips: texto escapado");
 const chm = C.chips(C.dadosChips(res), false);

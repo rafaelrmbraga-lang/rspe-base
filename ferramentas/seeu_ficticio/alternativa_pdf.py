@@ -43,7 +43,8 @@ def linhas(d):
               "Total A Pagar: %s" % _br(ps["horas"] - feitas), "Cumprimentos:",
               "Data Prevista de Cumprimento Data de Cumprimento Efetivo Horas Previstas Horas Trabalhadas Válido"]
         for prev, efet, hp, ht in ps["meses"]:
-            L.append(" ".join(x for x in (prev, efet, "%.2f" % hp, "%.2f" % ht if ht is not None else "", "" if ht is not None else "Sim") if x))
+            # como no SEEU: a linha ainda não cumprida sai só com a data e "Sim" (sem as horas previstas)
+            L.append(" ".join(x for x in (prev, efet, "%.2f" % hp if ht is not None else "", "%.2f" % ht if ht is not None else "", "" if ht is not None else "Sim") if x))
     return L
 
 

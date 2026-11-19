@@ -79,8 +79,8 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     ok(c.prd ? meus.length === 4 && meus[1].url === c.url_rspe && meus[3].url === c.url_alt
       : meus.length === 2 && meus[1].url === c.url_rspe, id + ": pedidos ao SEEU: a página, o RSPE" + (c.prd ? ", a aba das medidas e o relatório da pena alternativa" : "") +
       " (" + meus.map((p) => p.metodo + " " + p.url.slice(0, 60)).join(" | ") + ")");
-    if (c.prd) ok(/Prestação pecuniária: R\$ [\d.,]+ em atraso/.test(await f.textContent("#corpo")) && /PSC: [\d,]+ h em atraso/.test(await f.textContent("#corpo")),
-      id + ": cumprimento da restritiva no painel (pecuniária e PSC em atraso)");
+    if (c.prd) ok(/Prestação pecuniária: faltam R\$ [\d.,]+ · R\$ [\d.,]+ em atraso/.test(await f.textContent("#corpo")) && /PSC: faltam [\d,]+ h · [\d,]+ h em atraso/.test(await f.textContent("#corpo")),
+      id + ": cumprimento da restritiva no painel (o que falta e o que já venceu, pecuniária e PSC)");
     ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "392px", id + ": a página reserva a largura do painel");
     // chips logo abaixo de "Execução nº" (marcos do APTO, na página); ao rolar, a barra fixa com o nº e o nome
     await pg.waitForSelector("#apto-chips .sg", { timeout: 15000 });
@@ -135,11 +135,14 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabMovimentacoesProcesso");
     await pg.waitForSelector("#apto-movs .ch", { timeout: 15000 });
     const cat = async () => pg.evaluate(() => [...document.querySelectorAll("table.resultTable tbody > tr[id^='mov']")].map((tr) =>
-      [tr.dataset.aptoMov, getComputedStyle(tr).display !== "none", getComputedStyle(tr.children[1]).opacity, (tr.querySelector(".apto-tag") || {}).textContent || ""]));
+      [tr.dataset.aptoMov, getComputedStyle(tr).display !== "none", getComputedStyle(tr.children[1]).opacity, (tr.querySelector(".apto-tag") || {}).textContent || "",
+        tr.dataset.aptoArq, getComputedStyle(tr.children[0]).boxShadow]));
     let L = await cat();
     ok(L[1][0] === "decisao" && L[1][3] === "Decisão" && L[3][0] === "mp" && L[5][0] === "unidade" && L[6][0] === "defensoria" && L[8][0] === "despacho" && L[9][0] === "audiencia",
       id + ": movimentações classificadas pelo conteúdo (" + L.map((x) => x[0]).join(",") + ")");
-    ok(L[0][0] === "rotina" && L[0][2] === "0.45" && L[0][3] === "", id + ": rotina esmaecida e sem etiqueta");
+    ok(L[0][0] === "cartorio" && L[0][3] === "Cartório" && /217, 102, 31/.test(L[0][5]), id + ": cartório em laranja, com etiqueta (" + L[0][5] + ")");
+    ok(L[3][0] === "mp" && /179, 38, 30/.test(L[3][5]) && L[6][0] === "defensoria" && L[6][3] === "DPE" && /29, 122, 74/.test(L[6][5]), id + ": MP em vermelho, DPE em verde");
+    ok(L.every((x) => (x[4] === "0") === (x[2] === "0.45")), id + ": esmaecido só o que não tem arquivo vinculado (" + L.map((x) => x[4] + ":" + x[2]).join(",") + ")");
     await pg.screenshot({ path: path.join(SAIDA, "movimentacoes.png"), fullPage: true });
     // prévia do documento ao passar o mouse no link (sem nova aba): o quadro abre ao lado, com a 1ª página desenhada
     const nAbas = ctx.pages().length;
@@ -160,9 +163,20 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     await pg.screenshot({ path: path.join(SAIDA, "previa_expandida.png") });
     await pg.keyboard.press("Escape");
     ok(await pg.locator("#apto-previa .q").isHidden(), id + ": Esc fecha a prévia");
+    // opção "abrir os documentos no 2º monitor": o clique no link abre a janela do documento (desenhado pela extensão)
+    const cfgDoc = (v) => sw.evaluate(async (x) => { const { cfg } = await chrome.storage.local.get("cfg"); await chrome.storage.local.set({ cfg: Object.assign({}, cfg || {}, { docMonitor2: x }) }); }, v);
+    await cfgDoc(true);
+    await pg.waitForTimeout(300);
+    await pg.mouse.move(5, 5);
+    const [janela] = await Promise.all([ctx.waitForEvent("page", { timeout: 15000 }), pg.locator('a[href*="/seeu/arquivo.do"]').first().click()]);
+    await janela.waitForSelector("canvas", { timeout: 30000 });
+    ok(/\/painel\/previa\.html#doc=/.test(janela.url()) && await janela.locator("canvas").count() >= 1, id + ": 2º monitor: o documento abre na janela da extensão (" + janela.url().slice(-40) + ")");
+    await janela.close();
+    await cfgDoc(false);
+    await pg.bringToFront();
     await pg.locator('#apto-movs [data-rot="ocultar"]').click();
     L = await cat();
-    ok(L.filter((x) => x[0] === "rotina").every((x) => !x[1]) && L.filter((x) => x[0] !== "rotina").every((x) => x[1]), id + ": ocultar a rotina");
+    ok(L.filter((x) => x[4] === "0").every((x) => !x[1]) && L.filter((x) => x[4] === "1").every((x) => x[1]), id + ": ocultar só o que não tem arquivo vinculado");
     await pg.locator('#apto-movs [data-cat="mp"]').click();
     L = await cat();
     ok(L.filter((x) => x[1]).every((x) => x[0] === "mp"), id + ": filtro só MP");

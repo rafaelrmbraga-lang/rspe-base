@@ -213,7 +213,9 @@
 
   // ---------- destaques das movimentações (aba Movimentações do SEEU): pelo CONTEÚDO do evento, não só por quem movimentou.
   // Entrada: os grupos que o SEEU põe no id da linha (JUIZ, SERVIDOR, PROMOTOR, DEFENSOR, ADVOGADO, OUTROS, AUDIENCIA, SEMARQUIVO,
-  // HABILITACAOPROV, INVALIDO), o título do evento e o cargo de quem movimentou. Saída: a categoria.
+  // HABILITACAOPROV, INVALIDO), o título do evento e o cargo de quem movimentou. Saída: a categoria (cor: decisão azul, despacho
+  // azul claro, MP vermelho, Defensoria verde, advogado roxo, Depen/unidade amarelo, cartório laranja). Esmaecer ou ocultar vale
+  // para o que não tem arquivo vinculado, qualquer que seja a categoria.
   const ROTINA = /^(RECEBID[OA]S? OS AUTOS|CONFIRMADA A INTIMA|LEITURA DE REMESSA|REMETID[OA]S? OS AUTOS|CONCLUSOS|ATO ORDINAT|JUNTADA DE CI[ÊE]NCIA|DECORRIDO PRAZO|JUNTADA DE CERTID|RETIFICAD|REDISTRIBU|EXPEDI[ÇC][ÃA]O DE CERTID|EXPEDID[OA] (CERTID|OF[ÍI]CIO|INTIMA)|JUNTADA DE RELAT[ÓO]RIO D[AE] SITUA|PUBLICAD|ARQUIVAD|DESARQUIVAD|AUTUAD|DISTRIBU[ÍI]D|CANCELAD|ALTERAD|EVOLU[ÍI]DA A CLASSE|EXPEDI[ÇC][ÃA]O DE INTIMA|JUNTADA DE AR\b|RECEBIDO O|MERO EXPEDIENTE DE SECRETARIA)/;
   const DECISAO = /(DECIS|SENTEN|CONCEDID|DEFERID|INDEFERID|HOMOLOG|EXTINT|UNIFICAD|REGRESS|REVOGAD|SUSPENS|PROGRESS|DECLARAD|RECONHECID|DETERMINAD|INDULTO|COMUTA|REMI[ÇC][ÃA]O|LIVRAMENTO|ALVAR[ÁA]|MANDADO|PRISÃO|SOLTURA|MONITORA)/;
   const UNIDADE = /(DEPEN|AGEPEN|SEAP|ESTABELECIMENTO PENAL|PRES[ÍI]DIO|PENITENCI|UNIDADE PRISIONAL|ATESTADO|\bPAD\b|CONDUTA CARCER|FICHA DISCIPLINAR|CENTRAL DE ALVAR|COMUNICA[ÇC][ÃA]O DE (FUGA|EVAS|RECAPTURA|PRIS)|FUGA|EVAS[ÃA]O|RECAPTURA)/;
@@ -221,20 +223,21 @@
     const g = new Set((grupos || []).map((x) => String(x).toUpperCase()));
     const t = String(titulo || "").toUpperCase().normalize("NFC");
     const c = String(cargo || "");
-    if (g.has("INVALIDO")) return "rotina";
-    if (/^(RETIFICAD|CONCLUSOS)/.test(t)) return "rotina";   // mesmo lançado pelo gabinete
+    if (g.has("INVALIDO")) return "cartorio";
+    if (/^(RETIFICAD|CONCLUSOS)/.test(t)) return "cartorio";   // mesmo lançado pelo gabinete
     if (g.has("AUDIENCIA") || /AUDI[ÊE]NCIA/.test(t)) return "audiencia";
     if (g.has("JUIZ") || /^Magistrad|^Assessor/i.test(c)) return /DESPACHO|MERO EXPEDIENTE/.test(t) && !DECISAO.test(t.replace(/MERO EXPEDIENTE/, "")) ? "despacho" : "decisao";
-    if (ROTINA.test(t)) return "rotina";
+    if (ROTINA.test(t)) return "cartorio";
     if (g.has("PROMOTOR") || /Minist[ée]rio P[úu]blico/i.test(c)) return "mp";
     if (g.has("DEFENSOR") || /^Defensor/i.test(c)) return "defensoria";
     if (/Depen|Seap|Agepen/i.test(c) || UNIDADE.test(t)) return "unidade";
-    if (g.has("ADVOGADO") || g.has("PROCURADOR")) return "parte";
-    if (/^JUNTADA DE PETI[ÇC][ÃA]O/.test(t)) return "parte";
+    if (g.has("ADVOGADO") || g.has("PROCURADOR") || /^Advogad/i.test(c)) return "advogado";
+    if (g.has("SERVIDOR") || /Analista|T[ée]cnico Judici|Estagi[áa]ri|Distribuidor|Escriv/i.test(c)) return "cartorio";
+    if (/^JUNTADA DE PETI[ÇC][ÃA]O/.test(t)) return "advogado";
     return "outro";
   }
-  const CAT_MOV = [["decisao", "Decisões"], ["despacho", "Despachos"], ["mp", "MP"], ["defensoria", "Defensoria"], ["unidade", "Unidade prisional"],
-    ["audiencia", "Audiências"], ["parte", "Partes e advogados"], ["outro", "Outros"], ["rotina", "Rotina do cartório"]];
+  const CAT_MOV = [["decisao", "Decisões"], ["despacho", "Despachos"], ["mp", "MP"], ["defensoria", "DPE"], ["advogado", "ADV"],
+    ["unidade", "Depen / unidade"], ["audiencia", "Audiências"], ["cartorio", "Cartório"], ["outro", "Outros"]];
 
   const api = { esc, html, resumo, fundamento, chips, dadosChips, classificarMov, CAT_MOV, ICO };
   if (typeof module === "object" && module.exports) module.exports = api;

@@ -158,7 +158,9 @@ def movimentacoes(r):
     for k, (gr, tit, quem, cargo) in enumerate(MOVS):
         idv = "mov1Grau\n," + ",".join("\n" + g for g in gr.split(",")) + ",\n,\n"
         cls = "even" if k % 2 == 0 else "odd"
-        linhas.append(f"""<tr class="{cls}" id="{idv}" ><td></td><td align="center">{n - k}</td><td align="center">{(k % 27) + 1:02d}/10/2026 10:00:00</td>
+        mais = ("" if "SEMARQUIVO" in gr else f'<a href="javascript://nop/" class="linkArquivosmovimentacoes{k}"><img onclick="showDetail(\'rowmovimentacoes{k}\', '
+                f'\'iconmovimentacoes{k}\')" src="/seeu/img/themes/default/iPlus.gif" id="iconmovimentacoes{k}"/></a>')
+        linhas.append(f"""<tr class="{cls}" id="{idv}" ><td>{mais}</td><td align="center">{n - k}</td><td align="center">{(k % 27) + 1:02d}/10/2026 10:00:00</td>
 <td><b><div title="Não é possível movimentar o processo">{ESC(tit)}</div></b><br>Descrição fictícia do evento {n - k}{ARQ if k == 3 else ""}</td><td></td>
 <td>{ESC(quem)}<br><font size="1"><b>{ESC(cargo)}</b></font></td></tr>
 <tr id="rowmovimentacoes{k}" class="{cls}" style="display:none"><td colspan="5"><div class="extendedinfo">Carregando...</div></td></tr>""")
