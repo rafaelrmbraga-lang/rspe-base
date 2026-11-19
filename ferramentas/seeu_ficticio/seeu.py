@@ -35,7 +35,7 @@ a{color:#1a5fa8;text-decoration:none}
 .menu{background:#4a77a8;color:#fff;height:22px;display:flex;align-items:center;gap:14px;padding:0 14px;font-size:11.5px;font-weight:600}
 .conteudo{padding:14px 18px}
 .capa{background:#f7f7f7;border:1px solid #ddd;padding:10px 14px 6px;position:relative}
-.capa h3{margin:0;font:600 16px Arial,sans-serif;color:#1c3a5e}.capa h3 .num{color:#d40000}.capa h3 .num.solto{color:#1a8a2e}
+.capa h3{margin:0;font:600 16px Arial,sans-serif;color:#1c3a5e;display:flex}.capa h3 em.attention{font-style:normal;color:#d40000}.capa h3 em.attention.solto{color:#1a8a2e}
 .tram{font-size:11px;color:#666;font-weight:600;margin-bottom:10px;border-bottom:1px solid #ddd;padding-bottom:8px}
 table.form{border-collapse:collapse}table.form td{padding:2px 4px;vertical-align:top}
 table.form td.r{color:#7a7a8c;text-align:right;white-space:nowrap;padding-right:4px}
@@ -93,7 +93,7 @@ def capa(r):
              ("Classe Processual", "386 - Execução da Pena"), ("Assunto Principal", "7791 - Pena Privativa de Liberdade"),
              ("Nível de Sigilo", "Público"), ("Sumário da Pena", "Clique no campo para detalhamento")]
     return f"""<div class="capa" id="capaProcesso">
-<h3>Execução <span class="num{'' if _preso(r) else ' solto'}" id="numeroProcesso">{ESC(r.get('processo_execucao') or '')}</span></h3>
+<h3 id="barraTituloStatusProcessual"><div class="titulo processo">Execução <em class="attention{'' if _preso(r) else ' solto'}">{ESC(r.get('processo_execucao') or '')}</em></div></h3>
 <input type="hidden" id="processoNumeroFormatado" value="{ESC(r.get('processo_execucao') or '')}">
 <div class="tram">2190 dia(s) em tramitação</div>
 {_linhas(dados)}

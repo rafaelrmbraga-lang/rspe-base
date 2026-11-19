@@ -15,12 +15,29 @@ const res = { estado: "ok", painel: { processo: "9900001-00.2026.8.12.0001", nom
   contagem: { verde: 3, amarelo: 1 } } };
 const h = C.html(res);
 const pos = (t) => h.indexOf(t);
-ok(pos("Pena total") < pos("Data-base") && pos("Data-base") < pos("Para conferir") && pos("Para conferir") < pos(">Confere<") && pos(">Confere<") < pos("Crimes em execução"), "hierarquia: pena e marcos, para conferir, confere, crimes");
-ok(/<ul class="marcos"/.test(h) && !/class="al"[^>]*>[\s\S]*Data-base/.test(h.split("Para conferir")[1] || ""), "marcos em linhas, não em cartões");
-ok(/<li class="on proximo">/.test(h) && h.includes(">Próximo<"), "marco próximo em destaque, com texto");
-ok(h.includes("há ponto a conferir"), "marco com dúvida: sinal com texto para leitor de tela");
-ok(!h.includes("<script>") && h.includes("Progressão &lt;script&gt;"), "texto do cálculo nunca vira HTML");
-ok(h.includes("a &amp; b") && h.includes("LEP, art. 112"), "conta e fundamento do marco ao abrir");
+ok(pos("Pena total") < pos("Para conferir") && pos("Para conferir") < pos(">Confere<") && pos(">Confere<") < pos("Crimes em execução"), "hierarquia: pena, para conferir, confere, crimes");
+ok(!/<ul class="marcos"/.test(h) && !h.includes("Data-base (progressão)") && !h.includes("regime fechado"), "marcos e regime fora do painel lateral (estão nos chips da página)");
+// chips: regime e marcos numa faixa; próximo/atingida com ícone e texto; detalhe no clique; nº e nome com copiar na barra fixa
+const ch = C.chips(C.dadosChips(res), false), chf = C.chips(C.dadosChips(res), true);
+ok(ch.includes(">Regime<") && ch.includes(">Fechado<") && ch.includes(">Data-base<") && ch.includes("01/01/2024"), "chips: regime e data-base");
+ok(/class="sg proximo"[\s\S]*?<span class="est proximo"><svg[\s\S]*?<\/svg><span class="vh">próximo<\/span><\/span>/.test(ch), "chip próximo: só o ícone à vista (o texto para o leitor de tela)");
+// ícones dos benefícios: cada um abre o seu cartão no painel; estado no nome acessível; indulto e comutação com ícone próprio
+const ic = C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { icones: [{ tipo: "st", rotulo: "Saída temporária", estado: "conferir", alvo: "st" },
+  { tipo: "ind", rotulo: "Indulto 2025", estado: "ok", alvo: "i25" }, { tipo: "com", rotulo: "Comutação 2025", estado: "conferir", alvo: "c25" }] }) }), false);
+ok(/class="ben q" data-focar="st" aria-label="Saída temporária: a conferir\. Ver no painel"><svg/.test(ic), "chip da saída temporária: ícone, a conferir, abre o cartão");
+ok(/class="ben ok" data-focar="i25"[^>]*aria-label="Indulto 2025: cabe/.test(ic) && /data-focar="c25"/.test(ic), "chips de indulto e comutação");
+ok(C.html(res).includes('data-id="i25"'), "cartão com o id para o chip levar até ele");
+// copiar fundamento: texto corrido para a petição, sem as marcas do painel, com a base legal no fim
+const fp = C.fundamento({ titulo: "T", conta: ["1) O que houve: a pena diminuiu. O que pedir: o recálculo da progressão"], fundamento: "LEP, art. 112." });
+ok(fp === "A pena diminuiu. Requer-se o recálculo da progressão.\n\nFundamento: LEP, art. 112.", "fundamento pronto para a petição (" + JSON.stringify(fp) + ")");
+ok((ch.match(/data-chip=/g) || []).length === (ch.match(/data-det=/g) || []).length && /aria-expanded="false"/.test(ch), "cada chip abre o seu detalhe (botão, sem depender do mouse)");
+ok(chf.includes('data-copiar="processo"') && chf.includes('data-copiar="nome"') && chf.includes(res.painel.processo) && chf.includes(res.painel.nome), "barra fixa: nº e nome, com copiar");
+ok(/data-abrir="1"[^>]*>[\s\S]*?conferir<\/button>/.test(ch) === !!res.painel.contagem.amarelo, "chip do que falta conferir abre o painel");
+ok(!C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { nome: "<b>x</b>" }) }), true).includes("<b>x</b>"), "chips: texto escapado");
+const chm = C.chips(C.dadosChips(res), false);
+ok(chm.includes("com ponto a conferir"), "marco com dúvida: sinal com texto para leitor de tela (chip)");
+ok(!chm.includes("<script>") && chm.includes("Progressão &lt;script&gt;"), "texto do cálculo nunca vira HTML (chips)");
+ok(chm.includes("a &amp; b") && chm.includes("fração 16%"), "conta do marco no detalhe do chip");
 ok(/class="cnt">1</.test(h) && /class="al"/.test(h), "alertas em cartões, com contagem");
 ok(!/agir já|◆|▲/i.test(h), "sem 'agir já' e sem escala de urgência");
 ok(h.includes("Ficha disciplinar não lida"), "sem ficha: avisado");
@@ -43,10 +60,10 @@ ok(comFicha(true, true).includes('class="ficha curta amarelo"'), "ficha velha: a
 const hc = C.html(res);
 ok((hc.match(/data-acao="copiar-fund"/g) || []).length === (res.painel.alertas || []).length, "um Copiar fundamento por alerta");
 const a0 = res.painel.alertas[0];
-ok(C.fundamento(a0).startsWith(a0.titulo) && (!a0.fundamento || C.fundamento(a0).includes("Fundamento: " + a0.fundamento)), "texto do fundamento: título, conta e base legal");
+ok(!a0.fundamento || C.fundamento(a0).includes("Fundamento: " + a0.fundamento.replace(/\.$/, "")), "texto do fundamento com a base legal");
 const hd = C.html({ estado: "ok", painel: Object.assign({}, res.painel, { observacoes: [{ titulo: "Pena na ficha (x) difere da pena total do RSPE (y)", conta: [] }] }) });
 ok(hd.includes("sem efeito para o assistido: 1"), "observações de cadastro recolhidas");
 const t = C.resumo(res);
 ok(t.includes("MARCOS") && t.includes("[próximo]") && t.includes("PARA CONFERIR") && t.includes("Indulto 2025") && t.includes("NÃO CABE"), "resumo em texto");
 if (falhas.length) { console.log("FALHOU:\n  " + falhas.join("\n  ")); process.exit(1); }
-console.log("ok: painel_core v2.1 (marcos em linhas com destaque do próximo, alertas em destaque, estados, texto escapado, resumo)");
+console.log("ok: painel_core v2.2 (marcos nos chips da página com destaque do próximo, nº e nome com copiar, alertas em destaque, estados, texto escapado, resumo)");

@@ -44,6 +44,12 @@ DECRETOS = [("i25", "exp25", "Indulto 2025", "Decreto 12.790/2025"), ("c25", "ce
             ("i22", "exp22", "Indulto 2022", "Decreto 11.302/2022")]
 NAO_CABE = re.compile(r"^(vedad|n[aã]o atinge|n[aã]o alcan|fato posterior|prejudicad|n[aã]o se aplica|falta|n[aã]o cab)", re.I)
 DECIDIDO = re.compile(r"^(concedid|indeferid)", re.I)  # o juízo já decidiu (consta no RSPE): não alerta
+# avisos da auditoria que pedem o MESMO recálculo (a progressão já decidida, refeita com o que mudou depois dela): um cartão só
+RECALCULO_PROGRESSAO = {"remicao-preterita-apos-progressao": "remição", "semiaberto-referencia-desatualizada": "redução da pena"}
+# ícones dos benefícios nos chips da página (tipo, rótulo, ids dos cartões do painel), na ordem em que aparecem
+ICONES = [("st", "Saída temporária", ("st",)), ("pa", "Progressão antecipada", ("pa",)), ("ind", "Indulto", ("i25", "i24", "i22")),
+          ("com", "Comutação", ("c25", "c24")), ("ext", "Extinção", ("ext",)), ("presc", "Prescrição", ("presc",)),
+          ("rem", "Remição pendente", ("rem",))]
 # avisos de cadastro que não mudam o cálculo nem o que pedir pelo assistido: ficam numa seção recolhida, fora dos alertas
 SEM_EFEITO = re.compile(r"^(Pena na ficha .* difere da pena total do RSPE|Data impossível no cadastro)", re.I)
 PROXIMO = {"fechado": "semiaberto", "semiaberto": "aberto"}
@@ -198,6 +204,15 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
                                 "; ".join(pend) if pend else ("" if m.get("st_ok") else "requisitos objetivos ainda não atendidos"),
                                 [x.get("txt") for x in m.get("st_itens") or []], "LEP, arts. 122 a 125"))
 
+    if m.get("pa_ok") or m.get("pa_quase"):
+        # progressão antecipada (ícone de degraus no APTO): critério do juízo, não de lei - sempre a conferir com o juízo
+        pend = [x.get("txt") for x in m.get("pa_itens") or [] if x.get("ok") is None]
+        beneficios.append(_item("pa", bool(m.get("pa_ok")) and not pend, "Progressão antecipada",
+                                "requisitos atendidos" if m.get("pa_ok") else "a conferir", "",
+                                "; ".join(pend) if pend else "",
+                                [x.get("txt") for x in m.get("pa_itens") or []],
+                                "LEP, art. 112; critério do juízo da execução para o pedido antes da data do SEEU"))
+
     # ---- demais pontos
     if sem_ficha and _custodiado(r, m):
         ult = _ultima_remicao(r)
@@ -206,13 +221,40 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
             demais.append(_item("atestado", False, "Atestado de trabalho ou estudo", "%d meses" % ((hoje - ref).days // 30),
                                 ("última remição decidida em %s" % rs.fmt(ult)) if ult else ("sem remição decidida desde a prisão (%s)" % rs.fmt(ref)),
                                 "pedir atestado à unidade prisional", [], "LEP, arts. 126 e 129"))
+    rp_ = [x for x in m.get("rem_prio") or [] if x]
+    if rp_:
+        # remição pendente na ficha (dias exatos) que, declarada, já dá um benefício (ícone de avanço rápido no APTO)
+        demais.append(_item("rem", False, "Remição pendente que já dá benefício", "", rp_[-1], "pedir a declaração da remição",
+                            rp_[:-1], "LEP, arts. 126 a 129"))
     if not sem_ficha and (m.get("fd_cor") or "") in ("vermelho", "amarelo"):
         demais.append(_item("fd", False, "Ficha disciplinar: remição e atestados", "", m.get("fd_sit"), m.get("fd_sit") or "", [], "LEP, arts. 126 a 129"))
+    recalc = []  # avisos que pedem o mesmo recálculo da progressão já decidida: um cartão só
     for i, a in enumerate(m.get("aud_itens") or []):
         if a.get("baixado") or a.get("nivel") not in ("alerta", "verificar"):
             continue
+        if a.get("tipo") in RECALCULO_PROGRESSAO:
+            recalc.append(a)
+            continue
         demais.append(_item("aud%d" % i, False, a.get("titulo") or "", "", "", "conferir no cálculo do SEEU e nos autos",
                             _linhas(a.get("detalhe"), 4), a.get("fundamento") or ""))
+    if len(recalc) == 1:
+        a = recalc[0]
+        demais.append(_item("recalc", False, a.get("titulo") or "", "", "", "conferir no cálculo do SEEU e nos autos",
+                            _linhas(a.get("detalhe"), 4), a.get("fundamento") or ""))
+    elif recalc:
+        ref = next((a.get("ref") for a in recalc if a.get("ref")), "")
+        motivos = [RECALCULO_PROGRESSAO[a["tipo"]] for a in recalc]
+        fund = {}  # a mesma base citada nos dois avisos entra uma vez (a forma mais completa)
+        for a in recalc:
+            for f in re.split(r";\s*", (a.get("fundamento") or "").rstrip(".")):
+                k = re.sub(r"\s*\(.*\)\s*$", "", f).strip()
+                if k and len(f) > len(fund.get(k, "")):
+                    fund[k] = f
+        fund = list(fund.values())
+        demais.append(_item("recalc", False, "Pedir o recálculo da progressão%s: %s lançadas depois dela" % (
+                            (" de " + ref) if ref else "", " e ".join(motivos)),
+                            "", "", "conferir no cálculo do SEEU e nos autos",
+                            ["%d) %s" % (k + 1, a.get("detalhe") or "") for k, a in enumerate(recalc)], "; ".join(fund) + "."))
 
     # ficha disciplinar: a data de impressão (mais de 90 dias = conferir a atualizada) e a ficha oferecida que não é desta pessoa
     fic = m.get("ficha") if isinstance(m.get("ficha"), dict) else {}
@@ -258,9 +300,20 @@ def montar(r, m, hoje, faltou=None, fichas_n=0):
         else:
             (confere if x["status"] == "verde" else alertas).append(x)
     cont = {"verde": len(confere) + sum(1 for x in linhas if not x["alerta"]), "amarelo": len(alertas)}
+    # ícones dos benefícios (como os do APTO ao lado do nome), para os chips da página: cada um abre o seu cartão no painel
+    icones = []
+    for tipo, rot, ids in ICONES:
+        its = [x for x in beneficios + demais if x["id"] in ids and x not in observacoes]
+        if tipo == "presc":
+            its = [x for x in its if x["status"] != "verde"]  # prescrição só quando aparente ou a verificar
+        if not its:
+            continue
+        r0 = its[0]["titulo"] if tipo in ("ind", "com") else rot
+        icones.append({"tipo": tipo, "rotulo": r0 + (" +%d" % (len(its) - 1) if len(its) > 1 else ""),
+                       "estado": "ok" if any(x["status"] == "verde" for x in its) else "conferir", "alvo": its[0]["id"]})
     return {"processo": m.get("id") or r.get("processo_execucao") or "", "nome": m.get("nome") or r.get("nome") or "", "regime": reg,
             "hoje": rs.fmt(hoje), "pena": pena, "marcos": linhas, "alertas": alertas, "confere": confere, "crimes": crimes,
-            "nao_cabe": nao_cabe, "observacoes": observacoes, "contagem": cont, "ficha": not sem_ficha, "ficha_info": ficha_info}
+            "nao_cabe": nao_cabe, "observacoes": observacoes, "icones": icones, "contagem": cont, "ficha": not sem_ficha, "ficha_info": ficha_info}
 
 
 _ULTIMO = {}  # processo (dígitos) -> (modelo do APTO, data de referência) da última análise nesta sessão do motor

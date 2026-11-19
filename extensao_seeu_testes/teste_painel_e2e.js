@@ -39,6 +39,7 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     const html = atual.paginas[chave];
     return html ? rota.fulfill({ contentType: "text/html; charset=utf-8", body: html }) : rota.fulfill({ status: 404, body: "" });
   });
+  await ctx.grantPermissions(["clipboard-read", "clipboard-write"], { origin: "https://seeu.pje.jus.br" });
   const sw = ctx.serviceWorkers()[0] || await ctx.waitForEvent("serviceworker", { timeout: 15000 });
   ok(!!sw, "service worker da extensão no ar");
   const pg = ctx.pages()[0] || await ctx.newPage();
@@ -64,7 +65,38 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     ok(meus.every((p) => !/preAnalise|leitura|dispensar|assinar|juntar|salvar|excluir|alterar/i.test(p.url)), id + ": só endereços de leitura");
     ok(meus.length === 2 && meus[1].url === c.url_rspe, id + ": um único pedido além da página: o RSPE pelo link da página (" + meus.map((p) => p.url.slice(0, 60)).join(" | ") + ")");
     ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "392px", id + ": a página reserva a largura do painel");
+    // chips logo abaixo de "Execução nº" (marcos do APTO, na página); ao rolar, a barra fixa com o nº e o nome
+    await pg.waitForSelector("#apto-chips .sg", { timeout: 15000 });
+    ok(await pg.evaluate(() => document.getElementById("barraTituloStatusProcessual").nextElementSibling.id === "apto-chips"), id + ": chips logo abaixo do nº do processo");
+    const nseg = await pg.locator("#apto-chips button.sg").count();
+    ok(nseg >= 2, id + ": chips com os marcos (" + nseg + ")");
     await pg.screenshot({ path: path.join(SAIDA, `painel_${id}.png`) });
+    if (id === Object.keys(DADOS)[0]) {
+      await pg.locator("#apto-chips button.sg").first().click();
+      ok(await pg.locator("#apto-chips .det:not([hidden])").count() === 1, id + ": o chip abre o seu detalhe no clique");
+      // chip de benefício: abre o painel no cartão dele (destacado)
+      const ben = pg.locator("#apto-chips button.ben").first();
+      ok(await ben.count() === 1, id + ": chips dos benefícios na página");
+      const alvo = await ben.getAttribute("data-focar");
+      await ben.click();
+      await f.waitForSelector(`[data-id="${alvo}"].foco`, { timeout: 5000 }).catch(() => null);
+      ok(await f.evaluate((a) => { const el = document.querySelector(`[data-id="${a}"]`); return !!el && document.activeElement === el; }, alvo),
+        id + ": o chip " + alvo + " leva ao cartão no painel");
+      await pg.screenshot({ path: path.join(SAIDA, "chips_beneficio.png") });
+      await pg.evaluate(() => { document.body.style.paddingBottom = "2400px"; window.scrollTo(0, 1200); });
+      await pg.waitForSelector("#apto-barra .barra.on", { timeout: 5000 });
+      await pg.waitForTimeout(400);   // fim da entrada da barra
+      const fx = await pg.locator("#apto-barra .barra").boundingBox();
+      ok(fx && fx.y === 0 && Math.round(1366 - (fx.x + fx.width)) === 392, id + ": barra fixa no alto, sem cobrir o painel (" + JSON.stringify(fx) + ")");
+      await pg.screenshot({ path: path.join(SAIDA, "chips_barra_fixa.png") });
+      for (const [q, esperado] of [["processo", c.processo], ["nome", c.nome]]) {
+        await pg.locator(`#apto-barra [data-copiar="${q}"]`).click();
+        const t = await pg.evaluate(() => navigator.clipboard.readText()).catch((e) => "erro: " + e);
+        ok(t === esperado, id + ": copiar " + q + " (" + t + ")");
+      }
+      await pg.evaluate(() => { window.scrollTo(0, 0); });
+      await pg.waitForFunction(() => !document.querySelector("#apto-barra").shadowRoot.querySelector(".barra.on"), null, { timeout: 5000 });
+    }
     // trocar de aba no SEEU (a página recarrega): o painel volta pelo resultado guardado, sem ler as abas de novo
     const n0 = pedidos.length;
     await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabEventos");

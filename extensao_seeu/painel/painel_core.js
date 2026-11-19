@@ -43,30 +43,14 @@
       [["Pena total", x.total], ["Cumprida", x.cumprida], ["Remanescente", x.remanescente]]
         .map(([r, v]) => `<div><small>${r}</small><b>${esc(v || "—")}</b></div>`).join("") + `</div>` +
       (pct != null ? `<div class="barra" role="img" aria-label="${pct}% da pena cumprida"><span style="width:${pct}%"></span></div>` +
-        `<div class="pct">${pct}% cumprida${x.regime ? " · regime " + esc(x.regime.toLowerCase()) : ""}</div>` : "") +
+        `<div class="pct">${pct}% cumprida</div>` : "") +
       (x.aviso ? `<div class="aviso-exec">${esc(x.aviso)}</div>` : "");
-  }
-
-  // marcos: uma linha por data (rótulo, data, quanto falta); o detalhe (fração, conta) abre no clique
-  function marcos(p) {
-    const L = p.marcos || [];
-    if (!L.length) return "";
-    return `<ul class="marcos" aria-label="Marcos">` + L.map((m) => {
-      const det = [m.extra, ...(m.conta || [])].filter(Boolean);
-      const resumo = `<span class="mr">${esc(m.rotulo)}${m.alerta ? `<span class="mk" title="Há ponto a conferir neste marco">${ICO.amarelo}<span class="vh">há ponto a conferir</span></span>` : ""}</span>` +
-        `<span class="md">${esc(m.data || "—")}</span>` +
-        `<span class="mq">${m.destaque ? `<span class="dest ${esc(m.destaque)}">${DEST[m.destaque]}</span> ` : ""}${esc(m.quando || "")}</span>`;
-      const cls = m.destaque ? ` class="on ${esc(m.destaque)}"` : "";
-      return `<li${cls}>` + (det.length || m.fundamento
-        ? `<details><summary>${resumo}</summary><div class="mdet">${det.map(esc).join("<br>")}${m.fundamento ? `<div class="fund">${esc(m.fundamento)}</div>` : ""}</div></details>`
-        : `<div class="linha">${resumo}</div>`) + `</li>`;
-    }).join("") + `</ul>`;
   }
 
   // alertas: o destaque do painel, um cartão por ponto a conferir; cada um copia o seu fundamento (título, conta e base legal)
   function alerta(it, i) {
     const temConta = (it.conta || []).length || it.fundamento;
-    return `<li class="al"><div class="l1"><span class="ic">${ICO.amarelo}</span><span class="t">${esc(it.titulo)}</span>${it.valor ? `<span class="v">${esc(it.valor)}</span>` : ""}</div>` +
+    return `<li class="al" data-id="${esc(it.id)}" tabindex="-1"><div class="l1"><span class="ic">${ICO.amarelo}</span><span class="t">${esc(it.titulo)}</span>${it.valor ? `<span class="v">${esc(it.valor)}</span>` : ""}</div>` +
       `${it.motivo ? `<div class="m">${esc(it.motivo)}</div>` : ""}` +
       `${it.conferir ? `<div class="conf"><b>Conferir:</b> ${esc(it.conferir)}</div>` : ""}` +
       `<div class="al-pe">` + (temConta ? `<details><summary>Conta e fundamento</summary>${(it.conta || []).length ? `<div class="conta">${it.conta.map(esc).join("<br>")}</div>` : ""}` +
@@ -74,10 +58,22 @@
       `<button type="button" class="lnk copiar-f" data-acao="copiar-fund" data-i="${i}" aria-label="Copiar o fundamento: ${esc(it.titulo)}">Copiar fundamento</button></div></li>`;
   }
 
-  // texto do fundamento de um alerta, para colar na peça ou na anotação
+  // fundamento de um alerta pronto para colar na petição: a exposição em texto corrido (a conta do APTO, sem as marcas do painel -
+  // "Conferir:", numeração, "O que houve:") e, no fim, a base legal; as instruções ("pedir ...") viram o requerimento
+  function paraPeticao(t) {
+    return String(t || "").trim()
+      .replace(/^\d+\)\s*/, "")
+      .replace(/\b(O que houve|Por que importa):\s*/g, "")
+      .replace(/\bO que pedir:\s*/g, "Requer-se ")
+      .replace(/(^|[.:;]\s+)[Pp]edir (que|o|a|os|as)\b/g, (m0, a, b) => a + "requer-se " + b)
+      .replace(/\s*-\s*conferir[^.]*$/i, "")
+      .replace(/(^|[.!?]\s+)(\p{Ll})/gu, (m0, a, b) => a + b.toUpperCase())   // início de frase em maiúscula
+      .replace(/([^.!?])$/, "$1.");
+  }
   function fundamento(it) {
-    return [it.titulo + (it.valor ? ": " + it.valor : ""), it.motivo, ...(it.conta || []), it.fundamento ? "Fundamento: " + it.fundamento : ""]
-      .filter(Boolean).join("\n");
+    const corpo = ((it.conta || []).length ? it.conta : [it.motivo]).map(paraPeticao).filter((x) => x && x !== ".");
+    const base = String(it.fundamento || "").trim().replace(/\.$/, "");
+    return corpo.join("\n\n") + (base ? (corpo.length ? "\n\n" : "") + "Fundamento: " + base + "." : "");
   }
 
   // diagnóstico da leitura (só a estrutura: onde o painel roda, se achou o link do relatório, a resposta do SEEU; nenhum dado
@@ -92,13 +88,14 @@
 
   function corpo(res) {
     const p = res.painel || {};
-    let h = topo(p, res) + `<section class="pena" aria-label="Pena e marcos">${pena(p)}${marcos(p)}</section>`;
+    // os marcos e o regime ficam nos chips da página do SEEU (abaixo do nº do processo): aqui, só a pena
+    let h = topo(p, res) + `<section class="pena" aria-label="Pena">${pena(p)}</section>`;
     const A = p.alertas || [];
     h += `<section aria-labelledby="s-al"><h2 id="s-al" class="h-al">Para conferir${A.length ? ` <span class="cnt">${A.length}</span>` : ""}</h2>` +
       (A.length ? `<ul class="alertas">${A.map((a, i) => alerta(a, i)).join("")}</ul>` : `<p class="vazio">${ICO.verde} Nada para conferir.</p>`) + `</section>`;
     if ((p.confere || []).length) {
       h += `<section aria-labelledby="s-ok"><h2 id="s-ok">Confere</h2><ul class="confere">` +
-        p.confere.map((it) => `<li><span class="ic">${ICO.verde}</span><span class="t">${esc(it.titulo)}</span>${it.valor ? `<span class="v">${esc(it.valor)}</span>` : ""}</li>`).join("") + `</ul></section>`;
+        p.confere.map((it) => `<li data-id="${esc(it.id)}" tabindex="-1"><span class="ic">${ICO.verde}</span><span class="t">${esc(it.titulo)}</span>${it.valor ? `<span class="v">${esc(it.valor)}</span>` : ""}</li>`).join("") + `</ul></section>`;
     }
     if ((p.crimes || []).length) {
       h += `<section aria-labelledby="s-crimes"><h2 id="s-crimes">Crimes em execução</h2><ul class="crimes">` +
@@ -152,7 +149,64 @@
     return L.join("\n");
   }
 
-  const api = { esc, html, resumo, fundamento, ICO };
+  // ---------- chips na página do SEEU (logo abaixo de "Execução nº"; e na barra fixa ao rolar): regime e marcos numa faixa
+  // única de segmentos (rótulo pequeno em cima, data embaixo), o que falta conferir e, na barra fixa, o nº e o nome com copiar.
+  // Cada segmento é um botão: o detalhe (quanto falta, fração) abre no clique - nada só no mouse. Estado: ícone + texto.
+  const CICO = {
+    proximo: '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M12 7v5l3 2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg>',
+    atingida: '<svg viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false"><path d="M20 6 9 17l-5-5" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    copiar: '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true" focusable="false"><rect x="8" y="8" width="12" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" fill="none" stroke="currentColor" stroke-width="2.2"/></svg>',
+  };
+  const SVG = (d, extra) => `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"${extra || ""}>${d}</svg>`;
+  const BICO = {
+    st: SVG('<path d="M14 4h4a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-4"/><path d="M9 16l-4-4 4-4"/><path d="M5 12h10"/>'),   // saída temporária (APTO)
+    pa: SVG('<path d="M3 20h5v-5h5v-5h5V5h3"/>', ' stroke-width="2.4"'),                                       // progressão antecipada (APTO)
+    ind: SVG('<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7.6-1.7"/><circle cx="12" cy="16" r="1.3" fill="currentColor"/>'),  // indulto: cadeado aberto
+    com: SVG('<rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/><path d="M9 15h6"/>'),   // comutação: menos tempo de pena (calendário com "menos")
+    ext: SVG('<circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/>'),                                          // extinção
+    presc: SVG('<path d="M6 3h12M6 21h12"/><path d="M7 3c0 5 10 6 10 9s-10 4-10 9"/><path d="M17 3c0 5-10 6-10 9"/>'),   // prescrição: ampulheta
+    rem: '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true" focusable="false"><path d="M3 5.5v13l8.5-6.5zM12.5 5.5v13l8.5-6.5z"/></svg>',  // remição pendente (APTO)
+  };
+  const CROT = { db: "Data-base", prog: "Progressão", liv: "Livramento", term: "Término" };
+  function dadosChips(res) {
+    const p = (res && res.painel) || {};
+    return { processo: p.processo || "", nome: p.nome || "", regime: p.regime || (p.pena || {}).regime || "", conferir: (p.contagem || {}).amarelo || 0,
+      icones: (p.icones || []).map((x) => ({ tipo: x.tipo, rotulo: x.rotulo, estado: x.estado, alvo: x.alvo })),
+      marcos: (p.marcos || []).map((m) => ({ id: m.id, rotulo: m.rotulo, data: m.data, quando: m.quando, destaque: m.destaque, alerta: m.alerta,
+        detalhe: [m.extra, ...(m.conta || [])].filter(Boolean) })) };
+  }
+  function chips(d, fixa) {
+    const reg = String(d.regime || "").replace(/\s*-\s*ATIVO$/i, "");
+    const seg = (d.marcos || []).filter((m) => m.data && m.data !== "—").map((m, i) => {
+      const sub = m.id === "prog" && /ao\s+(\S+)/i.test(m.rotulo) ? " · " + /ao\s+(\S+)/i.exec(m.rotulo)[1] : "";
+      const est = m.destaque ? `<span class="est ${esc(m.destaque)}">${CICO[m.destaque] || ""}<span class="vh">${m.destaque === "proximo" ? "próximo" : "atingida"}</span></span>` : "";
+      const nome = `${esc(m.rotulo)}: ${esc(m.data)}${m.quando ? ", " + esc(m.quando) : ""}${m.alerta ? ", com ponto a conferir" : ""}`;
+      return `<button type="button" class="sg${m.destaque ? " " + esc(m.destaque) : ""}" data-chip="${i}" aria-expanded="false" aria-label="${nome}">` +
+        `<span class="rot">${esc(CROT[m.id] || m.rotulo)}${esc(sub)}${m.alerta ? '<b class="mk" aria-hidden="true">!</b>' : ""}</span>` +
+        `<span class="dt">${esc(m.data)}${est}</span></button>`;
+    }).join("");
+    const det = (d.marcos || []).filter((m) => m.data && m.data !== "—").map((m, i) =>
+      `<div class="det" data-det="${i}" hidden><b>${esc(m.rotulo)}</b> · ${esc(m.data)}${m.quando ? " · " + esc(m.quando) : ""}` +
+      `${(m.detalhe || []).length ? "<br>" + m.detalhe.map(esc).join(" · ") : ""}</div>`).join("");
+    const id = fixa ? `<span class="id"><span class="num">${esc(d.processo)}</span>` +
+      `<button type="button" class="cp" data-copiar="processo" aria-label="Copiar o número do processo">${CICO.copiar}<span>Nº</span></button>` +
+      `<span class="nm" title="${esc(d.nome)}">${esc(d.nome)}</span>` +
+      `<button type="button" class="cp" data-copiar="nome" aria-label="Copiar o nome do assistido">${CICO.copiar}<span>Nome</span></button></span>` :
+      `<span class="id"><button type="button" class="cp" data-copiar="processo" aria-label="Copiar o número do processo">${CICO.copiar}<span>Nº</span></button>` +
+      `<button type="button" class="cp" data-copiar="nome" aria-label="Copiar o nome do assistido">${CICO.copiar}<span>Nome</span></button></span>`;
+    // na barra fixa, o nº e o nome vêm primeiro (é o que se copia); abaixo do nº no SEEU, as datas primeiro e o copiar no fim
+    // benefícios: ícone + nome; verde = cabe, âmbar = a conferir (o nome do estado vai para o leitor de tela); o clique abre o cartão no painel
+    const bens = (d.icones || []).filter((x) => BICO[x.tipo]).map((x) =>
+      `<button type="button" class="ben ${x.estado === "ok" ? "ok" : "q"}" data-focar="${esc(x.alvo)}" aria-label="${esc(x.rotulo)}: ${x.estado === "ok" ? "cabe" : "a conferir"}. Ver no painel">` +
+      `${BICO[x.tipo]}<span>${esc(x.rotulo)}</span></button>`).join("");
+    const faixa = `<span class="seg">${reg ? `<span class="sg reg"><span class="rot">Regime</span><span class="dt">${esc(reg)}</span></span>` : ""}${seg}</span>` +
+      (bens ? `<span class="bens" role="group" aria-label="Benefícios">${bens}</span>` : "") +
+      (d.conferir ? `<button type="button" class="conf" data-abrir="1" aria-label="Abrir o painel: ${d.conferir} ${d.conferir === 1 ? "ponto" : "pontos"} para conferir">` +
+        `<b aria-hidden="true">!</b>${d.conferir} conferir</button>` : "");
+    return `<div class="faixa${fixa ? " fixa" : ""}" role="group" aria-label="Marcos do APTO">${fixa ? id + faixa : faixa + id}</div>${det}`;
+  }
+
+  const api = { esc, html, resumo, fundamento, chips, dadosChips, ICO };
   if (typeof module === "object" && module.exports) module.exports = api;
   else raiz.APTO_PAINEL_CORE = api;
 })(typeof self !== "undefined" ? self : this);

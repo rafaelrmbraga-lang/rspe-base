@@ -10,7 +10,7 @@ A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI s
 lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
 SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
 
-PAINEL DO APTO NA PÁGINA DO PROCESSO (1.16) - NÃO PRECISA DO APTO
+PAINEL DO APTO NA PÁGINA DO PROCESSO (1.17) - NÃO PRECISA DO APTO
  - Ao abrir um processo no SEEU, a análise aparece à direita, na ordem da ficha
    do assistido: pena, marcos, benefícios e demais pontos. Verde "Confere" =
    há certeza; amarelo "Conferir" = conferir (sem "agir já"). Cada item abre a
@@ -21,6 +21,18 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.16) - NÃO PRECISA DO APTO
    o RSPE automático ligado, o mesmo pedido serve aos dois). O PDF é lido no
    navegador pelo leitor do APTO: o resultado é o mesmo do APTO. Nada é
    clicado nem enviado. Sem o relatório lido, o painel não conclui nada.
+ - Chips (1.17): logo abaixo de "Execução nº", no próprio SEEU, o regime e os
+   marcos do APTO (data-base, progressão, livramento, término), com
+   "próximo"/"atingida"; clicar num chip mostra quanto falta e a fração. Ao
+   rolar a página, uma barra fixa no alto traz o nº e o nome do assistido,
+   cada um com "copiar". Os marcos saíram do painel lateral. Ao lado, os
+   ícones dos benefícios, como no APTO: saída temporária, progressão
+   antecipada, indulto (cadeado aberto), comutação (calendário com "menos"),
+   extinção, prescrição e remição pendente - verde cabe, âmbar a conferir;
+   clicar abre o cartão no painel, com a conta e o fundamento. Marco
+   atingido: ✓ verde; próximo: relógio.
+ - "Copiar fundamento" copia o texto corrido, pronto para a petição (sem as
+   marcas do painel), com a base legal no fim.
  - Alertas: indulto ou comutação já decididos no SEEU (concedido ou
    indeferido) não alertam; decreto não alcançado fica em "Não cabe"; avisos
    de cadastro sem efeito para o assistido ficam recolhidos no fim. Cada

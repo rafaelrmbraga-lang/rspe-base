@@ -154,3 +154,7 @@ input:focus-visible,textarea:focus-visible{outline:3px solid var(--foco);outline
 .al-pe details{flex:1;min-width:0;margin-top:0}
 .al-pe .copiar-f{flex:none;margin-left:auto;line-height:16px}
 .lnk:focus-visible{outline:3px solid #F2B705;outline-offset:1px;border-radius:3px}
+/* cartão aberto pelo chip da página: destaque breve */
+[data-id]:focus{outline:none}
+[data-id].foco{box-shadow:0 0 0 3px #F2B705;transition:box-shadow .2s ease-out}
+@media (prefers-reduced-motion:reduce){[data-id].foco{transition:none}}

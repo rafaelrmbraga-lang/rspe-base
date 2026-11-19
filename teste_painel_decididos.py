@@ -33,6 +33,15 @@ assert 'decididos' not in out and not any(re.match(r'(Indulto|Comutação) 2025'
 assert any('Indulto 2022' in x['titulo'] for x in out['nao_cabe'])
 assert [o['titulo'][:13] for o in out['observacoes']]==['Pena na ficha'], out['observacoes']
 assert not any(x.startswith('Pena na ficha') for x in al)
+# os dois avisos que pedem o mesmo recálculo da progressão viram um cartão só, com as duas razões e a base legal sem repetir
+from datetime import date  # noqa: E402
+mm = {"aud_itens": [{"nivel": "verificar", "tipo": "remicao-preterita-apos-progressao", "titulo": "R", "detalhe": "remição",
+                     "fundamento": "LEP, arts. 126, § 8º, e 128; STJ, Tema 1165."},
+                    {"nivel": "verificar", "tipo": "semiaberto-referencia-desatualizada", "ref": "07/02/2026", "titulo": "D", "detalhe": "redução",
+                     "fundamento": "LEP, arts. 111 e 112; STJ, Tema 1165 (a data da progressão é a do preenchimento dos requisitos)."}]}
+rc = [x for x in rp.montar({}, mm, date(2026, 11, 19))["alertas"] if x["id"] == "recalc"]
+assert len(rc) == 1 and rc[0]["titulo"] == "Pedir o recálculo da progressão de 07/02/2026: remição e redução da pena lançadas depois dela", rc
+assert rc[0]["conta"] == ["1) remição", "2) redução"] and rc[0]["fundamento"].count("Tema 1165") == 1, rc
 if len(sys.argv) > 1:
     json.dump(out, open(sys.argv[1], 'w'), ensure_ascii=False)
-print('ok: painel - decidido no SEEU não alerta, não alcançado afastado, aviso de cadastro recolhido')
+print('ok: painel - decidido no SEEU não alerta, não alcançado afastado, aviso de cadastro recolhido, recálculo da progressão num cartão só')

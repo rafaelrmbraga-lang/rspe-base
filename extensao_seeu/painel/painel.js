@@ -23,10 +23,14 @@ function pintar(res) {
   const c = ok ? p.contagem : { verde: 0, amarelo: 0 };
   $("copiar").disabled = !ok;
   $("resumo").disabled = !ok;
-  $("lg-v").innerHTML = ok ? C.ICO.verde + " " + c.verde + " confere" : "";
-  $("lg-a").innerHTML = ok ? C.ICO.amarelo + " " + c.amarelo + " conferir" : "";
+  // no rodapé, só o ícone e o número (o texto inteiro fica para o leitor de tela e no título): cabe ao lado dos botões
+  $("lg-v").innerHTML = ok ? C.ICO.verde + c.verde + '<span class="vh"> confere</span>' : "";
+  $("lg-a").innerHTML = ok ? C.ICO.amarelo + c.amarelo + '<span class="vh"> conferir</span>' : "";
+  $("lg-v").title = ok ? c.verde + " confere" : "";
+  $("lg-a").title = ok ? c.amarelo + " para conferir" : "";
   $("lg-v").hidden = $("lg-a").hidden = !ok;
   avisarPagina({ apto: "contagem", c });
+  avisarPagina({ apto: "chips", d: ok ? C.dadosChips(res) : null });   // regime e marcos ficam nos chips da página
 }
 
 window.addEventListener("message", (ev) => {
@@ -34,7 +38,23 @@ window.addEventListener("message", (ev) => {
   const d = ev.data || {};
   if (d.apto === "progresso" && atual && atual.estado === "carregando") pintar(Object.assign({}, atual, { etapa: d.etapa }));
   if (d.apto === "rspe" && esperandoRspe) { esperandoRspe(d); esperandoRspe = null; }
+  if (d.apto === "focar") focar(String(d.id || ""));
 });
+
+// chip de benefício clicado na página: leva ao cartão, abre a conta e o fundamento e destaca por um instante
+function focar(id) {
+  if (res) { res = null; modoResumo(false); pintar(atual); }
+  const el = [...$("corpo").querySelectorAll("[data-id]")].find((x) => x.dataset.id === id);
+  if (!el) return;
+  el.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  const dt = el.querySelector("details");
+  if (dt) dt.open = true;
+  el.classList.remove("foco");
+  void el.offsetWidth;
+  el.classList.add("foco");
+  el.focus({ preventScroll: true });
+  setTimeout(() => el.classList.remove("foco"), 1800);
+}
 
 function pedirRspe(novo) {
   return new Promise((ok) => { esperandoRspe = ok; avisarPagina({ apto: "lerRspe", novo: !!novo }); });

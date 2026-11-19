@@ -42,7 +42,7 @@ for i in ids:
     pdf = fp.gerar(os.path.join(tempfile.mkdtemp(), "ficha_%s.pdf" % i), nome=r["nome"], cpf=r.get("cpf") or "", filiacao=r["nome_mae"] + " \\ PAI EXEMPLO",
                    eventos=fp.EXEMPLO, impresso=h)
     pf = json.loads(rp.analisar_rspe(json.dumps(dict(entrada, fichas=[rv.json_seguro(rf.extrair(pdf))]), ensure_ascii=False)))
-    out[i] = {"processo": r["processo_execucao"], "paginas": seeu.paginas(r), "rspe_pdf": rspe, "url_rspe": seeu.URL_RSPE % seeu.id_execucao(r), "esperado": {"assinatura": p["assinatura"], "contagem": p["contagem"]},
+    out[i] = {"processo": r["processo_execucao"], "nome": p["nome"], "paginas": seeu.paginas(r), "rspe_pdf": rspe, "url_rspe": seeu.URL_RSPE % seeu.id_execucao(r), "esperado": {"assinatura": p["assinatura"], "contagem": p["contagem"]},
               "ficha_pdf": pdf, "esperado_ficha": {"assinatura": pf["assinatura"], "contagem": pf["contagem"], "ficha": pf["ficha"]}}
 json.dump(out, open(saida, "w", encoding="utf-8"), ensure_ascii=False)
 print("ok", len(out))
