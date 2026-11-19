@@ -51,6 +51,9 @@ ok(M(["ADVOGADO"], "JUNTADA DE PETIÇÃO DE MANIFESTAÇÃO") === "advogado" && M
 ok(M(["OUTROS"], "JUNTADA DE PETIÇÃO DE MANIFESTAÇÃO", "Apoio Especializado") === "pericia" && M(["OUTROS"], "JUNTADA DE LAUDO", "Apoio Especializado") === "pericia",
   "movimentações: apoio especializado (perícia) não é advogado");
 ok(M(["OUTROS"], "JUNTADA DE CIÊNCIA", "Depen/Seap") === "unidade", "movimentações: o que a Depen movimenta fica em amarelo");
+ok(M(["DEFENSOR"], "JUNTADA DE CIÊNCIA", "Defensor(a) Público(a)") === "defensoria" && M(["DEFENSOR"], "CONFIRMADA A INTIMAÇÃO ELETRÔNICA", "Defensor(a) Público(a)") === "cartorio" &&
+  M(["OUTROS"], "CONFIRMADA A INTIMAÇÃO ELETRÔNICA", "Apoio Especializado") === "cartorio" && M(["OUTROS"], "EXPEDIÇÃO DE DOCUMENTO GERADO NO BNMP3", "") === "cartorio",
+  "movimentações: o que o sistema gera é cartório para todos; a ciência da parte leva a cor da parte");
 ok(/data-abrir="1"[^>]*>[\s\S]*?conferir<\/button>/.test(ch) === !!res.painel.contagem.amarelo, "chip do que falta conferir abre o painel");
 ok(!C.chips(C.dadosChips({ painel: Object.assign({}, res.painel, { nome: "<b>x</b>" }) }), true).includes("<b>x</b>"), "chips: texto escapado");
 const chm = C.chips(C.dadosChips(res), false);

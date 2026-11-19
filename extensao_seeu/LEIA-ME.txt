@@ -44,7 +44,11 @@ PAINEL DO APTO NA PÁGINA DO PROCESSO (1.21) - NÃO PRECISA DO APTO
    no que se procura de relance: decisão (azul), MP (vermelho) e DPE (verde);
    despacho (azul claro), ADV (roxo), Depen (amarelo), perícia (marrom) e
    audiência têm a faixa lateral e a etiqueta; o cartório fica em cinza
-   discreto. A cor segue no detalhe aberto pelo "+". Esmaecer
+   discreto. A cor segue no detalhe aberto pelo "+". O que o sistema gera
+   (intimação confirmada, recebidos, remessa, prazo, conclusos, ofícios e
+   documentos expedidos) é sempre cartório; a ciência ou a manifestação da
+   parte leva a cor da parte. Nas linhas destacadas, o realce próprio do SEEU
+   não aparece por baixo (só o esquema do APTO). Esmaecer
    ou ocultar vale só para o que não tem arquivo vinculado. A barra acima da
    tabela filtra por categoria (com as contagens); a escolha é lembrada.
  - ANPP, transação penal e suspensão condicional do processo (1.18): pelo

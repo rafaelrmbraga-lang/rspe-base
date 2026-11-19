@@ -226,28 +226,31 @@
   // HABILITACAOPROV, INVALIDO), o título do evento e o cargo de quem movimentou. Saída: a categoria (cor: decisão azul, despacho
   // azul claro, MP vermelho, Defensoria verde, advogado roxo, Depen/unidade amarelo, cartório laranja). Esmaecer ou ocultar vale
   // para o que não tem arquivo vinculado, qualquer que seja a categoria.
-  const ROTINA = /^(RECEBID[OA]S? OS AUTOS|CONFIRMADA A INTIMA|LEITURA DE REMESSA|REMETID[OA]S? OS AUTOS|CONCLUSOS|ATO ORDINAT|JUNTADA DE CI[ÊE]NCIA|DECORRIDO PRAZO|JUNTADA DE CERTID|RETIFICAD|REDISTRIBU|EXPEDI[ÇC][ÃA]O DE CERTID|EXPEDID[OA] (CERTID|OF[ÍI]CIO|INTIMA)|JUNTADA DE RELAT[ÓO]RIO D[AE] SITUA|PUBLICAD|ARQUIVAD|DESARQUIVAD|AUTUAD|DISTRIBU[ÍI]D|CANCELAD|ALTERAD|EVOLU[ÍI]DA A CLASSE|EXPEDI[ÇC][ÃA]O DE INTIMA|JUNTADA DE AR\b|RECEBIDO O|MERO EXPEDIENTE DE SECRETARIA)/;
+  // o que o próprio SEEU (ou o cartório) gera, seja quem for o "movimentado por": sempre cartório
+  const SISTEMA = /^(CONFIRMADA A INTIMA|RECEBID[OA]S? OS AUTOS|RECEBIDO O|LEITURA DE REMESSA|DECORRIDO PRAZO|REMETID[OA]S? OS AUTOS|CONCLUSOS|RETIFICAD|ATO ORDINAT|EXPEDI[ÇC][ÃA]O DE (CERTID|OF[ÍI]CIO|INTIMA|DOCUMENTO GERADO)|EXPEDID[OA] (CERTID|OF[ÍI]CIO|INTIMA)|PUBLICAD|REDISTRIBU|DISTRIBU[ÍI]D|AUTUAD|ARQUIVAD|DESARQUIVAD|EVOLU[ÍI]DA A CLASSE|ALTERAD|CANCELAD)/;
+  const ROTINA = /^(RECEBID[OA]S? OS AUTOS|CONFIRMADA A INTIMA|LEITURA DE REMESSA|REMETID[OA]S? OS AUTOS|CONCLUSOS|ATO ORDINAT|JUNTADA DE CI[ÊE]NCIA|DECORRIDO PRAZO|JUNTADA DE CERTID|RETIFICAD|REDISTRIBU|EXPEDI[ÇC][ÃA]O DE (CERTID|OF[ÍI]CIO|DOCUMENTO GERADO)|EXPEDID[OA] (CERTID|OF[ÍI]CIO|INTIMA)|JUNTADA DE RELAT[ÓO]RIO D[AE] SITUA|PUBLICAD|ARQUIVAD|DESARQUIVAD|AUTUAD|DISTRIBU[ÍI]D|CANCELAD|ALTERAD|EVOLU[ÍI]DA A CLASSE|EXPEDI[ÇC][ÃA]O DE INTIMA|JUNTADA DE AR\b|RECEBIDO O|MERO EXPEDIENTE DE SECRETARIA)/;
   const DECISAO = /(DECIS|SENTEN|CONCEDID|DEFERID|INDEFERID|HOMOLOG|EXTINT|UNIFICAD|REGRESS|REVOGAD|SUSPENS|PROGRESS|DECLARAD|RECONHECID|DETERMINAD|INDULTO|COMUTA|REMI[ÇC][ÃA]O|LIVRAMENTO|ALVAR[ÁA]|MANDADO|PRISÃO|SOLTURA|MONITORA)/;
   const UNIDADE = /(DEPEN|AGEPEN|SEAP|ESTABELECIMENTO PENAL|PRES[ÍI]DIO|PENITENCI|UNIDADE PRISIONAL|ATESTADO|\bPAD\b|CONDUTA CARCER|FICHA DISCIPLINAR|CENTRAL DE ALVAR|COMUNICA[ÇC][ÃA]O DE (FUGA|EVAS|RECAPTURA|PRIS)|FUGA|EVAS[ÃA]O|RECAPTURA)/;
+  // ordem: (1) o que o sistema ou o cartório gera (intimação confirmada, recebidos, remessa, prazo, conclusos, ofícios e certidões
+  // expedidos) é sempre cartório, seja quem for o "movimentado por"; (2) audiência; (3) juízo (decisão ou despacho); (4) a parte que
+  // agiu, pelo cargo ou grupo (MP, DPE, Depen, perícia, advogado) - a ciência ou a manifestação dela leva a cor dela; (5) o resto
+  // da rotina é cartório.
   function classificarMov(grupos, titulo, cargo) {
     const g = new Set((grupos || []).map((x) => String(x).toUpperCase()));
     const t = String(titulo || "").toUpperCase().normalize("NFC");
     const c = String(cargo || "");
-    if (g.has("INVALIDO")) return "cartorio";
-    if (/^(RETIFICAD|CONCLUSOS)/.test(t)) return "cartorio";   // mesmo lançado pelo gabinete
+    if (g.has("INVALIDO") || SISTEMA.test(t)) return "cartorio";
     if (g.has("AUDIENCIA") || /AUDI[ÊE]NCIA/.test(t)) return "audiencia";
     if (g.has("JUIZ") || /^Magistrad|^Assessor/i.test(c)) return /DESPACHO|MERO EXPEDIENTE/.test(t) && !DECISAO.test(t.replace(/MERO EXPEDIENTE/, "")) ? "despacho" : "decisao";
-    if (/Depen|Seap|Agepen/i.test(c)) return "unidade";   // o que a unidade prisional movimenta (ciência, ofício, atestado): amarelo
-    if (/Apoio Especializado|Perit/i.test(c)) return "pericia";
-    if (ROTINA.test(t)) return "cartorio";
     if (g.has("PROMOTOR") || /Minist[ée]rio P[úu]blico/i.test(c)) return "mp";
     if (g.has("DEFENSOR") || /^Defensor/i.test(c)) return "defensoria";
-    if (/Apoio Especializado|Perit/i.test(c)) return "pericia";
-    if (/Depen|Seap|Agepen/i.test(c) || UNIDADE.test(t)) return "unidade";
+    if (/Depen|Seap|Agepen/i.test(c)) return "unidade";
     // apoio especializado do juízo (perícia, equipe psicossocial): laudos e relatórios técnicos - não é advogado
     if (/Apoio Especializado|Perit|Psic[óo]log|Assistente Social|Equipe T[ée]cnica|Multidisciplinar/i.test(c) || /^JUNTADA DE LAUDO/.test(t)) return "pericia";
     if (g.has("ADVOGADO") || g.has("PROCURADOR") || /^Advogad|^Procurador/i.test(c)) return "advogado";
-    if (g.has("SERVIDOR") || /Analista|T[ée]cnico\(?a?\)? Judici|Estagi[áa]ri|Distribuidor|Escriv/i.test(c)) return "cartorio";
+    if (ROTINA.test(t)) return "cartorio";
+    if (UNIDADE.test(t)) return "unidade";
+    if (g.has("SERVIDOR") || /Analista|T[ée]cnico\(?a?\)? Judici|Estagi[áa]ri|Distribuidor|Escriv|^Sistema/i.test(c)) return "cartorio";
     return "outro";
   }
   const CAT_MOV = [["decisao", "Decisões"], ["despacho", "Despachos"], ["mp", "MP"], ["defensoria", "DPE"], ["advogado", "ADV"],

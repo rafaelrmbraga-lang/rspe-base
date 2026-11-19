@@ -27,9 +27,15 @@
   };
 
   // a linha e o seu detalhe (o "+" abre os documentos numa linha logo abaixo): a mesma cor
-  const css = Object.entries(COR).map(([k, [bar, bg, tb, tc]]) =>
-    `tr[data-apto-mov="${k}"]>td:first-child,tr[data-apto-det="${k}"]>td:first-child{box-shadow:inset 4px 0 0 ${bar}}` +
-    (bg ? `tr[data-apto-mov="${k}"]>td,tr[data-apto-det="${k}"]>td{background-color:${bg}!important}` : "") +
+  // máscara sobre o realce do próprio SEEU (fundos de "Magistrado", "Defensor"...): nas linhas classificadas, o fundo é o neutro
+  // (branco e cinza claro alternados, como a tabela do SEEU) e só as categorias do APTO ganham cor - as regras de cor vêm depois e
+  // são mais específicas (o atributo repetido), para vencer sempre
+  const T = "table.apto-movs tbody>";
+  const neutro = `${T}tr[data-apto-mov]>td,${T}tr[data-apto-det]>td{background-color:#fff!important;background-image:none!important}
+    ${T}tr.even[data-apto-mov]>td,${T}tr.even[data-apto-det]>td{background-color:#F6F7F8!important}\n`;
+  const css = neutro + Object.entries(COR).map(([k, [bar, bg, tb, tc]]) =>
+    `${T}tr[data-apto-mov="${k}"]>td:first-child,${T}tr[data-apto-det="${k}"]>td:first-child{box-shadow:inset 4px 0 0 ${bar}}` +
+    (bg ? `${T}tr[data-apto-mov="${k}"][data-apto-mov]>td,${T}tr[data-apto-det="${k}"][data-apto-det]>td{background-color:${bg}!important}` : "") +
     `tr[data-apto-mov="${k}"] .apto-tag{background:${tb};color:${tc}}`).join("\n") + `
     .apto-tag{display:inline-block;margin:0 6px 2px 0;padding:1px 7px;border-radius:999px;font:700 10.5px/1.5 "Source Sans 3","Segoe UI",system-ui,sans-serif;
       letter-spacing:.02em;vertical-align:1px;white-space:nowrap}
