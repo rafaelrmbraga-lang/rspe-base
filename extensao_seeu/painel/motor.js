@@ -28,14 +28,14 @@ export function carregar() {
 sys.path.insert(0, "/motor")
 import rspe_motor, rspe_painel
 rspe_motor.VERSAO = ${JSON.stringify(info.versao)}`);
-      const analisar = py.globals.get("rspe_painel").analisar_dossie;
+      const analisar = py.globals.get("rspe_painel").analisar_abas;
       return { py, info, analisar, carga: Math.round(performance.now() - t0) };
     })().catch((e) => { pronto = null; throw e; });
   }
   return pronto;
 }
 
-// texto do dossiê do APTO, exatamente como chegou -> painel calculado aqui (texto JSON)
+// {"abas": {nome: HTML}, "hoje": "dd/mm/aaaa"} em texto -> painel calculado aqui (texto JSON)
 export async function analisar(texto) {
   const m = await carregar();
   const t = performance.now();

@@ -1,16 +1,17 @@
-// Painel no SEEU, de ponta a ponta: Chromium com a extensão carregada, página do processo do SEEU fictícia (rota do
-// Playwright, nada vai ao SEEU real) e o APTO de teste (servidor_painel.py, já no ar em 127.0.0.1:47321).
-// Confere: o painel aparece na própria aba (nenhuma aba nova), o motor da extensão chega ao MESMO resultado do APTO
-// ("Confere com o APTO"), recolher/abrir pela lingueta, e o estado é lembrado. Uso: node teste_painel_e2e.js [saida_dir]
+// Painel no SEEU, de ponta a ponta e SEM o APTO: Chromium com a extensão carregada e as páginas do SEEU fictício (no visual
+// das capturas oficiais) servidas por rota do Playwright - nada vai ao SEEU real. Confere: o painel aparece na própria aba
+// (nenhuma aba nova), a extensão lê as abas em segundo plano só com GET de endereços de leitura, chega ao MESMO resultado que
+// o Python do APTO (assinatura), a página reserva a largura do painel, recolher/abrir pela lingueta e o estado é lembrado;
+// trocar de aba no SEEU não refaz a leitura (resultado guardado na sessão).
+// Uso: python paginas_painel.py S035,S141,S006 paginas.json && node teste_painel_e2e.js paginas.json [saida_dir]
 const { chromium } = require("playwright");
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
 
 const EXT = path.join(__dirname, "..", "extensao_seeu");
-const SAIDA = process.argv[2] || path.join(__dirname, "saida_painel");
-const CASOS = JSON.parse(fs.readFileSync(path.join(__dirname, "..", "casos_simulados", "casos.json"), "utf-8"));
-const PAGINA = fs.readFileSync(path.join(__dirname, "seeu_processo_painel.html"), "utf-8");
+const DADOS = JSON.parse(fs.readFileSync(process.argv[2], "utf-8"));
+const SAIDA = process.argv[3] || path.join(__dirname, "saida_painel");
 const falhas = [];
 const ok = (c, m) => { if (!c) falhas.push(m); };
 
@@ -21,49 +22,55 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
     headless: true, channel: "chromium", viewport: { width: 1366, height: 860 }, deviceScaleFactor: 2,
     args: [`--disable-extensions-except=${EXT}`, `--load-extension=${EXT}`],
   });
+  let atual = null;            // o SEEU guarda o processo aberto na sessão: as abas vêm sem o número
+  const pedidos = [];
   await ctx.route("https://seeu.pje.jus.br/**", (rota) => {
-    const u = new URL(rota.request().url());
-    const dig = u.searchParams.get("numeroUnico") || "";
-    const c = CASOS.find((x) => x.processo.replace(/\D/g, "") === dig);
-    const proc = c ? c.processo : dig.replace(/^(\d{7})(\d{2})(\d{4})(\d)(\d{2})(\d{4})$/, "$1-$2.$3.$4.$5.$6");
-    return rota.fulfill({ contentType: "text/html; charset=utf-8", body: PAGINA.replace(/__PROC__/g, proc).replace(/__NOME__/g, c ? c.rspe.nome : "Pessoa Fora da Base") });
+    const rq = rota.request();
+    const u = new URL(rq.url());
+    pedidos.push({ metodo: rq.method(), url: u.pathname + u.search });
+    const dig = u.searchParams.get("numeroUnico");
+    if (dig) atual = Object.values(DADOS).find((c) => c.processo.replace(/\D/g, "") === dig) || null;
+    if (!atual) return rota.fulfill({ status: 404, body: "" });
+    const chave = dig ? "/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabInformacoesAdicionais" : u.pathname + u.search;
+    const html = atual.paginas[chave];
+    return html ? rota.fulfill({ contentType: "text/html; charset=utf-8", body: html }) : rota.fulfill({ status: 404, body: "" });
   });
-  let sw = ctx.serviceWorkers()[0] || await ctx.waitForEvent("serviceworker", { timeout: 15000 });
+  const sw = ctx.serviceWorkers()[0] || await ctx.waitForEvent("serviceworker", { timeout: 15000 });
   ok(!!sw, "service worker da extensão no ar");
   const pg = ctx.pages()[0] || await ctx.newPage();
   const abasAntes = ctx.pages().length;
-  const ids = (process.env.CASOS != null ? process.env.CASOS : "S001,S141,S093").split(",").filter(Boolean);
-  for (const id of ids) {
-    const c = CASOS.find((x) => x.id === id);
+  const moldura = async () => {
+    for (let i = 0; i < 100; i++) { const f = pg.frames().find((x) => x.url().includes("/painel/painel.html")); if (f) return f; await pg.waitForTimeout(100); }
+    throw new Error("moldura do painel não apareceu");
+  };
+  for (const [id, c] of Object.entries(DADOS)) {
     const t0 = Date.now();
+    const antes = pedidos.length;
     await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=" + c.processo.replace(/\D/g, ""));
-    const fr = await (await pg.waitForSelector("#apto-painel", { state: "attached", timeout: 15000 })).evaluate(() => true);
-    ok(fr, id + ": painel na página");
-    const moldura = pg.frames().find((f) => f.url().includes("/painel/painel.html")) ||
-      await new Promise((res) => { const i = setInterval(() => { const f = pg.frames().find((x) => x.url().includes("/painel/painel.html")); if (f) { clearInterval(i); res(f); } }, 100); });
-    await moldura.waitForSelector(".selo, .aviso", { timeout: 60000 });
-    const selo = await moldura.textContent(".selo, .aviso");
-    console.log(id, "·", selo.replace(/\s+/g, " ").trim().slice(0, 110), "·", Date.now() - t0, "ms");
-    ok(/Confere com o APTO/.test(selo), id + ": esperava 'Confere com o APTO', veio: " + selo);
-    const margem = await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight);
-    ok(margem === "392px", id + ": a página reserva a largura do painel (" + margem + ")");
+    const f = await moldura();
+    await f.waitForSelector(".pena, .aviso", { timeout: 90000 });
+    const leg = (await f.textContent(".leg")).replace(/\s+/g, " ").trim();
+    const meus = pedidos.slice(antes);
+    console.log(id, "·", leg, "·", meus.length - 1, "pedidos de leitura ·", Date.now() - t0, "ms");
+    ok(leg.includes(c.esperado.contagem.verde + " confere") && leg.includes(c.esperado.contagem.amarelo + " conferir"),
+      id + ": contagem diferente do Python do APTO (" + leg + " x " + JSON.stringify(c.esperado.contagem) + ")");
+    const assin = await sw.evaluate(async (dig) => { const g = await chrome.storage.session.get("painel:" + dig); return g["painel:" + dig] && g["painel:" + dig].resultado.painel.assinatura; }, c.processo.replace(/\D/g, ""));
+    ok(assin === c.esperado.assinatura, id + ": assinatura da extensão diferente da do Python do APTO");
+    ok(meus.every((p) => p.metodo === "GET"), id + ": só GET ao SEEU");
+    ok(meus.every((p) => !/preAnalise|leitura|dispensar|assinar|juntar|salvar|excluir|alterar/i.test(p.url)), id + ": só endereços de leitura");
+    ok(meus.some((p) => /processoCriminal\.do/.test(p.url)), id + ": leu as páginas dos processos criminais");
+    ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "392px", id + ": a página reserva a largura do painel");
     await pg.screenshot({ path: path.join(SAIDA, `painel_${id}.png`) });
+    // trocar de aba no SEEU (a página recarrega): o painel volta pelo resultado guardado, sem ler as abas de novo
+    const n0 = pedidos.length;
+    await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&selectedIcon=tabEventos");
+    const f2 = await moldura();
+    await f2.waitForSelector(".pena", { timeout: 30000 });
+    ok(pedidos.length - n0 === 1, id + ": trocar de aba não deve refazer a leitura (" + (pedidos.length - n0 - 1) + " pedidos a mais)");
   }
-  // processo que não está na base aberta (ou, com SEM_APTO=1, o APTO fechado): o painel orienta, sem resultado
-  const fora = process.env.SEM_APTO ? "sem_apto" : "fora_da_base";
-  await pg.goto("https://seeu.pje.jus.br/seeu/visualizacaoProcesso.do?actionType=visualizar&numeroUnico=00000010020268120001");
-  await pg.waitForTimeout(500);
-  const mf = await new Promise((res) => { const i = setInterval(() => { const f = pg.frames().find((x) => x.url().includes("/painel/painel.html")); if (f) { clearInterval(i); res(f); } }, 100); });
-  await mf.waitForSelector(".aviso, .selo", { timeout: 30000 });
-  const av = (await mf.textContent(".aviso, .selo")).replace(/\s+/g, " ");
-  console.log("aviso ·", av.slice(0, 120));
-  ok(fora === "sem_apto" ? /Abra o APTO/.test(av) : /fora da base/.test(av), "aviso de " + fora + ": " + av);
-  await pg.screenshot({ path: path.join(SAIDA, "painel_" + fora + ".png") });
   ok(ctx.pages().length === abasAntes, "nenhuma aba nova aberta (" + ctx.pages().length + " x " + abasAntes + ")");
-  // recolher pela moldura e reabrir pela lingueta
-  const moldura = pg.frames().find((f) => f.url().includes("/painel/painel.html"));
-  await moldura.waitForSelector("#recolher");
-  await moldura.click("#recolher");
+  const f = await moldura();
+  await f.click("#recolher");
   await pg.waitForTimeout(300);
   ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "0px", "recolhido: a página volta à largura toda");
   await pg.screenshot({ path: path.join(SAIDA, "painel_recolhido.png") });
@@ -72,5 +79,5 @@ const ok = (c, m) => { if (!c) falhas.push(m); };
   ok(await pg.evaluate(() => getComputedStyle(document.documentElement).marginRight) === "0px", "recolhido continua recolhido depois de recarregar");
   await ctx.close();
   if (falhas.length) { console.log("FALHOU:\n  " + falhas.join("\n  ")); process.exit(1); }
-  console.log("ok: painel no SEEU (" + ids.length + " processos)");
+  console.log("ok: painel no SEEU sem o APTO (" + Object.keys(DADOS).length + " processos)");
 })().catch((e) => { console.error(e); process.exit(1); });

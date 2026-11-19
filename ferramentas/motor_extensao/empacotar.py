@@ -16,7 +16,7 @@ import urllib.request
 RAIZ = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 DESTINO = os.path.join(RAIZ, "extensao_seeu", "motor")
 # os módulos que o painel usa (rspe_painel importa rspe_motor, que importa os demais; alguns entram por import tardio)
-MODULOS = ["rspe_painel", "rspe_motor", "rspe_scraper", "rspe_view", "rspe_ficha", "rspe_regras", "rspe_decretos", "rspe_prescricao",
+MODULOS = ["rspe_painel", "rspe_seeu_abas", "rspe_motor", "rspe_scraper", "rspe_view", "rspe_ficha", "rspe_regras", "rspe_decretos", "rspe_prescricao",
            "rspe_auditoria", "rspe_reincidencia", "rspe_remicao", "rspe_calc", "rspe_indulto_tl"]
 DADOS = ["base_juridica.json"]
 PYODIDE_VERSAO = "0.27.7"  # Python 3.12.7, o mesmo 3.12 da compilação do APTO (.github/workflows/build.yml)

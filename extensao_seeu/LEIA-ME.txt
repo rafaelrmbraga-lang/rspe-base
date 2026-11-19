@@ -10,22 +10,26 @@ A Mesa do Defensor (o motivo de cada intimação e a última decisão) e o SEI s
 lidos quando o APTO pede (botões "Ler a Mesa" e "Ler o SEI", nas funções SEEU e
 SEI do APTO), só lendo. Os controles, a baixa e as petições ficam no APTO.
 
-PAINEL DO APTO NA PÁGINA DO PROCESSO (1.15)
- - Ao abrir um processo no SEEU, a análise do APTO aparece à direita: agir já
-   (◆), até 30 dias (▲), a conferir (●), até 90 dias (○), cabe (✓), as
-   hipóteses afastadas e os prazos. Cada item abre a conta e o fundamento.
- - O SEEU continua igual: o painel só reserva a sua largura (nada fica
-   coberto), não clica, não abre aba nem janela. "›" (ou Esc) recolhe numa
-   lingueta na borda, com a contagem; clicar nela reabre. A escolha é lembrada.
- - Mesmas regras e mesmo resultado do APTO: o painel roda os mesmos arquivos
-   do APTO dentro da extensão e confere com o APTO aberto. "Confere com o
-   APTO" só aparece quando os dois resultados são idênticos.
- - Precisa do APTO aberto, com o processo na base aberta. Sem o APTO, o painel
-   pede para abri-lo. Sem a ficha do SIAPEN, o que depende dela sai "a conferir".
+PAINEL DO APTO NA PÁGINA DO PROCESSO (1.15) - NÃO PRECISA DO APTO
+ - Ao abrir um processo no SEEU, a análise aparece à direita, na ordem da ficha
+   do assistido: pena, marcos, benefícios e demais pontos. Verde "Confere" =
+   há certeza; amarelo "Conferir" = conferir (sem "agir já"). Cada item abre a
+   conta e o fundamento.
+ - Leitura: as abas do processo são buscadas em segundo plano, nesta mesma aba
+   e com a sua sessão (só leitura: Informações Gerais e Adicionais, Partes,
+   Processos Criminais, Eventos e Incidentes). Nada é clicado nem enviado.
+ - O cálculo é o do APTO (os mesmos arquivos, rodando dentro da extensão).
+ - O SEEU continua igual: o painel só reserva a sua largura, não abre aba nem
+   janela. "›" (ou Esc) recolhe numa lingueta na borda, com a contagem do que
+   é para conferir; clicar nela reabre. A escolha é lembrada.
+ - O resultado fica guardado por 10 minutos (só na sessão do navegador):
+   trocar de aba no SEEU não refaz a leitura. "Ler de novo" (↻) refaz.
  - A primeira análise depois de abrir o navegador leva alguns segundos (o
-   motor é carregado uma vez); as seguintes, menos de 1 segundo.
+   motor é carregado uma vez); as seguintes, cerca de 1 segundo mais a
+   leitura das abas.
+ - Sem a ficha do SIAPEN, o que depende dela fica amarelo.
  - Liga e desliga no painel da extensão ("Mostrar o painel do APTO na página
-   do processo"). Nada é guardado além da sessão do navegador.
+   do processo").
  - Pasta motor: gerada na compilação (os mesmos .py do APTO e o Pyodide). Quem
    usa a extensão direto do repositório roda antes:
    python ferramentas/motor_extensao/empacotar.py
